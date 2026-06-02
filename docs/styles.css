@@ -222,7 +222,7 @@ canvas{display:block;}
 
 /* ─────────── STAGE UP ─────────── */
 .stageup{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at center,rgba(34,30,16,0.96),rgba(10,13,21,0.98));animation:fadeBg .4s ease;}
+  background:radial-gradient(ellipse at center,rgba(36,31,17,0.97),#0B0E15 80%);animation:fadeBg .4s ease;}
 @keyframes fadeBg{from{opacity:0;}to{opacity:1;}}
 .stageup-inner{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;position:relative;}
 .stageup-kicker{font-family:var(--display);font-size:40px;font-weight:800;letter-spacing:4px;color:var(--gold);
@@ -235,6 +235,13 @@ canvas{display:block;}
 
 /* confetti */
 .confetti{position:absolute;width:9px;height:9px;border-radius:2px;top:40%;left:50%;pointer-events:none;}
+
+/* day-complete + tutorial overlays */
+.oc-emoji{font-size:54px;animation:popIn .55s var(--spring);}
+.oc-title{font-family:var(--display);font-size:27px;font-weight:800;letter-spacing:-.5px;}
+.tut-step{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--gold);}
+#tutWolf{display:flex;justify-content:center;}
+#tutWolf .wolf-svg-el{height:184px;}
 
 /* ─────────── real illustrated wolf image ─────────── */
 .wolf-portrait{display:flex;align-items:center;justify-content:center;position:relative;}

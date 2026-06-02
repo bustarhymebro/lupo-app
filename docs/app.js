@@ -59,6 +59,8 @@ function defaultState(){
   return {
     onboarded:false,
     reminders:false,
+    tutorialSeen:false,
+    lastCelebratedDay:null,
     pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
           consistentDays:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
@@ -76,6 +78,8 @@ function load(){
   if(!state.habits) state.habits = defaultState().habits;
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k] = {enabled:false}; if(state.habits[k].target==null) state.habits[k].target = HABITS[k].def; });
   if(state.timer === undefined) state.timer = null;
+  if(state.tutorialSeen === undefined) state.tutorialSeen = false;
+  if(state.lastCelebratedDay === undefined) state.lastCelebratedDay = null;
 }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -102,6 +106,7 @@ function logCompletionRate(entry){
   const keys = enabledHabits(); if(keys.length===0) return 0;
   return keys.filter(k=>entry[k]===true).length / keys.length;
 }
+function logAllEnabledDone(entry){ const keys=enabledHabits(); return keys.length>0 && keys.every(k=>entry[k]===true); }
 
 // ── Game logic ──
 function moodForEnergy(e){ if(e>=0.75)return'thriving'; if(e>=0.5)return'good'; if(e>=0.35)return'neutral'; if(e>=0.2)return'disappointed'; return'struggling'; }
@@ -151,7 +156,7 @@ let tickStarted=false;
 function startTick(){ if(tickStarted) return; tickStarted=true; setInterval(()=>{
   if(!state || !state.timer) return;
   const done=checkTimer();
-  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); return; }
+  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); maybeDayComplete(); return; }
   const left=fmtClock(timerLeftMs()), off=String((1-timerFrac())*(2*Math.PI*26));
   document.querySelectorAll('[data-timer-clock]').forEach(el=> el.textContent=left);
   document.querySelectorAll('[data-timer-ring]').forEach(el=> el.style.strokeDashoffset=off);
@@ -268,6 +273,7 @@ function toggleAndRefresh(k,card){
   const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
   haptic(nowAll&&!wasAll?[12,40,18]:12);
   if(nowAll&&!wasAll) celebrateWolf('wolfHome');
+  maybeDayComplete();
   updateHabitCompletion(false);
 }
 function renderTimerBanner(elId){
@@ -411,6 +417,43 @@ function showStageUp(){
 }
 document.getElementById('stageUpBtn').addEventListener('click',()=>{ document.getElementById('stageUp').hidden=true; haptic(10); });
 
+// ── Day complete "good job" ──
+function maybeDayComplete(){
+  if(logAllEnabledDone(ensureLog(todayKey())) && state.lastCelebratedDay!==todayKey()){
+    state.lastCelebratedDay=todayKey(); save(); showDayComplete(); return true;
+  }
+  return false;
+}
+function showDayComplete(){
+  document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew today. Come back tomorrow — don't break the chain.";
+  document.getElementById('dayComplete').hidden=false;
+  haptic([14,50,24,50,30]);
+  setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
+}
+document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ document.getElementById('dayComplete').hidden=true; haptic(10); });
+
+// ── First-run tutorial ──
+const TUT=[
+  {m:0.0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows — pup to legend. Slip, and he regresses. He answers to you.'},
+  {m:0.18,t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer — sleep, time off your phone, workouts. Finish them to feed him.'},
+  {m:0.62,t:'Watch him evolve.',      b:'Journey shows every form ahead. Tiny gains daily across hundreds of levels — the streak is the whole game.'},
+  {m:1.0, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
+];
+let tutI=0;
+function showTutorial(){ tutI=0; document.getElementById('tutorial').hidden=false; renderTut(); }
+function renderTut(){
+  const s=TUT[tutI];
+  LupoWolf.renderWolf('tutWolf', s.m);
+  document.getElementById('tutStep').textContent=(tutI+1)+' / '+TUT.length;
+  document.getElementById('tutTitle').textContent=s.t;
+  document.getElementById('tutBody').textContent=s.b;
+  document.getElementById('tutNext').textContent = tutI===TUT.length-1 ? "LET'S GO" : 'NEXT';
+}
+document.getElementById('tutNext').addEventListener('click',()=>{ haptic(10);
+  if(tutI<TUT.length-1){ tutI++; renderTut(); }
+  else { document.getElementById('tutorial').hidden=true; state.tutorialSeen=true; save(); }
+});
+
 // ═══════════════════════════════════════════════════════
 //  ONBOARDING
 // ═══════════════════════════════════════════════════════
@@ -457,6 +500,7 @@ function enterApp(){
   document.getElementById('appMain').hidden=false;
   switchScreen('home');
   if(pendingStageUp){ pendingStageUp=false; showStageUp(); }
+  else if(!state.tutorialSeen){ showTutorial(); }
 }
 function boot(){ load(); startTick(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); checkTimer(); enterApp(); } }
 window.addEventListener('load', boot);
