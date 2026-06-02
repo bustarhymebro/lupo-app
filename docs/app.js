@@ -190,14 +190,35 @@ const screens = {
   stats:  document.getElementById('screen-stats'),
 };
 let currentScreen = 'home';
+const wolves = {}; // animated wolf controllers
+
+function haptic(ms){ try{ if(navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) navigator.vibrate(ms); }catch(e){} }
+function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
+function stagger(nodes, base){
+  base = base || 0;
+  nodes.forEach((k,i) => { k.classList.remove('rise'); k.style.animationDelay = (base + i*55) + 'ms'; void k.offsetWidth; k.classList.add('rise'); });
+}
+function animateNumber(el, to, dur, suffix){
+  suffix = suffix || ''; dur = dur || 700;
+  const start = performance.now();
+  function tick(now){
+    const p = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(to * eased) + suffix;
+    if(p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
 
 function switchScreen(name){
   currentScreen = name;
   Object.entries(screens).forEach(([k,el]) => el.hidden = (k !== name));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen === name));
+  haptic(8);
   if(name === 'home') renderHome();
   if(name === 'habits') renderHabits();
   if(name === 'stats') renderStats();
+  playEnter(screens[name]);
 }
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => switchScreen(tab.dataset.screen));
@@ -218,15 +239,18 @@ function renderHome(){
   document.getElementById('moodMsg').textContent =
     '"' + (STAGE_MOOD_MSG[p.stage][p.mood] || '') + '"';
 
-  drawWolf(document.getElementById('wolfHome'), p.stage, false);
+  const hc = document.getElementById('wolfHome');
+  if(!wolves.home) wolves.home = LupoWolf.mount(hc, p.stage, {mood:p.mood});
+  else { wolves.home.setStage(p.stage); wolves.home.setMood(p.mood); }
 
   document.getElementById('stageLine').textContent =
     `STAGE ${p.stage} · ${STAGES[p.stage].name.toUpperCase()}`;
   document.getElementById('stageTag').textContent = STAGES[p.stage].tag;
 
   // energy
-  document.getElementById('energyVal').textContent = Math.round(p.energy*100) + '%';
-  document.getElementById('energyFill').style.width = (p.energy*100) + '%';
+  animateNumber(document.getElementById('energyVal'), Math.round(p.energy*100), 700, '%');
+  const ef = document.getElementById('energyFill');
+  requestAnimationFrame(() => ef.style.width = (p.energy*100) + '%');
 
   // progress
   const block = document.getElementById('progressBlock');
@@ -239,7 +263,8 @@ function renderHome(){
     document.getElementById('progressLabel').textContent =
       'PROGRESS TO ' + STAGES[p.stage+1].name.toUpperCase();
     document.getElementById('progressDays').textContent = left + (left===1?' DAY LEFT':' DAYS LEFT');
-    document.getElementById('progressFill').style.width = (progressToNextStage()*100) + '%';
+    const pf = document.getElementById('progressFill');
+    requestAnimationFrame(() => pf.style.width = (progressToNextStage()*100) + '%');
   }
 
   // quick row
@@ -293,21 +318,30 @@ function renderHabits(){
          <svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
        </div>`;
     card.addEventListener('click', () => {
+      const wasAll = logAllRequiredDone(ensureLog(todayKey()));
       toggleHabit(k);
-      renderHabits();
-      maybeBanner();
+      const e2 = ensureLog(todayKey());
+      const isDone = e2[k] === true;
+      card.classList.toggle('done', isDone);
+      card.querySelector('.habit-check').classList.toggle('checked', isDone);
+      const nowAll = logAllRequiredDone(e2);
+      haptic(nowAll && !wasAll ? [12,40,18] : 12);
+      if(nowAll && !wasAll && wolves.home) wolves.home.celebrate();
+      updateHabitCompletion(false);
     });
     list.appendChild(card);
   });
+  stagger([...list.children]);
+  updateHabitCompletion(true);
+}
 
+function updateHabitCompletion(initial){
+  const entry = ensureLog(todayKey());
   const rate = logCompletionRate(entry);
   document.getElementById('completionPct').textContent = Math.round(rate*100) + '%';
-  document.getElementById('completionFill').style.width = (rate*100) + '%';
-
-  document.getElementById('successBanner').hidden = !logAllRequiredDone(entry);
-}
-function maybeBanner(){
-  const entry = ensureLog(todayKey());
+  const fill = document.getElementById('completionFill');
+  if(initial) requestAnimationFrame(() => fill.style.width = (rate*100) + '%');
+  else fill.style.width = (rate*100) + '%';
   document.getElementById('successBanner').hidden = !logAllRequiredDone(entry);
 }
 document.getElementById('saveBtn').addEventListener('click', () => {
@@ -333,17 +367,19 @@ function renderStats(){
 
   const grid = document.getElementById('statGrid');
   const cards = [
-    {ico:'📅',label:'TOTAL DAYS',val:p.totalDaysTracked,color:'#fff'},
-    {ico:'🔥',label:'STREAK',val:p.consistentDays,color:'#F5A623'},
-    {ico:'⭐',label:'STAGE',val:p.stage,sub:STAGES[p.stage].name.toUpperCase(),color:'#F5A623'},
-    {ico:'✓',label:'COMPLETION',val:Math.round(oc*100)+'%',color:oc>0.7?'#22C55E':'#F5A623'},
+    {ico:'📅',label:'TOTAL DAYS',to:p.totalDaysTracked,suffix:'',color:'#fff'},
+    {ico:'🔥',label:'STREAK',to:p.consistentDays,suffix:'',color:'#F5A623'},
+    {ico:'⭐',label:'STAGE',to:p.stage,suffix:'',sub:STAGES[p.stage].name.toUpperCase(),color:'#F5A623'},
+    {ico:'✓',label:'COMPLETION',to:Math.round(oc*100),suffix:'%',color:oc>0.7?'#22C55E':'#F5A623'},
   ];
   grid.innerHTML = cards.map(c =>
     `<div class="stat-card">
        <div class="stat-card-head"><span class="stat-card-ico">${c.ico}</span><span class="stat-card-label">${c.label}</span></div>
-       <div class="stat-card-val" style="color:${c.color}">${c.val}</div>
+       <div class="stat-card-val" data-to="${c.to}" data-suffix="${c.suffix}" style="color:${c.color}">0${c.suffix}</div>
        ${c.sub?`<div class="stat-card-sub">${c.sub}</div>`:''}
      </div>`).join('');
+  stagger([...grid.children]);
+  grid.querySelectorAll('.stat-card-val').forEach((el,i) => animateNumber(el, +el.dataset.to, 700 + i*70, el.dataset.suffix));
 
   // growth journey
   const gr = document.getElementById('growthRow');
@@ -357,7 +393,7 @@ function renderStats(){
        <div class="growth-name">${s.name.split(' ')[0].toUpperCase()}</div>`;
     gr.appendChild(cell);
     const cv = cell.querySelector('canvas');
-    drawWolf(cv, i, false);
+    LupoWolf.still(cv, i);
     cv.style.opacity = ach ? '1' : '0.3';
     if(i < STAGES.length-1){
       const link = document.createElement('div');
@@ -422,15 +458,37 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════
 //  STAGE-UP OVERLAY
 // ═══════════════════════════════════════════════════════
+function burstConfetti(host){
+  const colors = ['#F5A623','#FFCB45','#F3E9D8','#22C55E','#fff'];
+  for(let i=0;i<28;i++){
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.background = colors[i % colors.length];
+    host.appendChild(c);
+    const ang = Math.random()*Math.PI*2;
+    const dist = 80 + Math.random()*160;
+    c.animate([
+      { transform:'translate(-50%,-50%) rotate(0deg)', opacity:1 },
+      { transform:`translate(${Math.cos(ang)*dist - 50}%, ${Math.sin(ang)*dist - 50}%) rotate(${Math.random()*720-360}deg)`, opacity:0 }
+    ], { duration: 900 + Math.random()*500, easing:'cubic-bezier(.2,.7,.3,1)' });
+    setTimeout(()=> c.remove(), 1500);
+  }
+}
 function showStageUp(){
   const p = state.pet;
   document.getElementById('stageUpName').textContent = STAGES[p.stage].name.toUpperCase();
   document.getElementById('stageUpTag').textContent = STAGES[p.stage].tag;
-  drawWolf(document.getElementById('wolfStageUp'), p.stage, false);
+  const cv = document.getElementById('wolfStageUp');
+  if(wolves.stageup) wolves.stageup.stop();
+  wolves.stageup = LupoWolf.mount(cv, p.stage, {mood:'thriving'});
   document.getElementById('stageUp').hidden = false;
+  haptic([18,60,30,60,40]);
+  setTimeout(()=> { wolves.stageup.celebrate(); burstConfetti(document.querySelector('.stageup-inner')); }, 250);
 }
 document.getElementById('stageUpBtn').addEventListener('click', () => {
   document.getElementById('stageUp').hidden = true;
+  haptic(10);
+  if(wolves.stageup){ wolves.stageup.stop(); wolves.stageup = null; }
 });
 
 // ═══════════════════════════════════════════════════════
@@ -444,7 +502,7 @@ function startOnboarding(){
   document.getElementById('screen-onboarding').hidden = false;
   obPage = 0; obSelected = [];
   renderOnboarding();
-  drawWolf(document.getElementById('wolfOnboard'), 4, true);
+  if(!wolves.onboard) wolves.onboard = LupoWolf.mount(document.getElementById('wolfOnboard'), 4, {isOnboard:true, mood:'thriving'});
 }
 
 function renderOnboarding(){
@@ -454,7 +512,7 @@ function renderOnboarding(){
   next.textContent = obPage === 2 ? 'BEGIN' : 'CONTINUE';
 
   if(obPage === 1){
-    drawWolf(document.getElementById('wolfName'), 2, true);
+    if(!wolves.name) wolves.name = LupoWolf.mount(document.getElementById('wolfName'), 2, {isOnboard:true, mood:'good'});
     const inp = document.getElementById('petNameInput');
     next.disabled = inp.value.trim().length === 0;
   }else{
@@ -502,6 +560,7 @@ document.getElementById('petNameInput').addEventListener('input', () => {
 document.getElementById('obSkip').addEventListener('click', () => { obPage = 2; renderOnboarding(); });
 
 document.getElementById('obNext').addEventListener('click', () => {
+  haptic(10);
   if(obPage < 2){ obPage++; renderOnboarding(); return; }
   // finish
   const name = document.getElementById('petNameInput').value.trim() || 'Lupo';
@@ -519,6 +578,8 @@ function completeOnboarding(name, selected){
   state.pet.createdDate = new Date().toISOString();
   ensureLog(todayKey());
   save();
+  haptic([12,50,20]);
+  ['onboard','name'].forEach(k => { if(wolves[k]){ wolves[k].stop(); wolves[k] = null; } });
   enterApp();
 }
 
