@@ -1,5 +1,5 @@
 // Lupo service worker. Offline-first cache
-const CACHE = 'lupo-v18';
+const CACHE = 'lupo-v19';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,11 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
+  './assets/wolf/painted-cut-0.png',
+  './assets/wolf/painted-cut-1.png',
+  './assets/wolf/painted-cut-2.png',
+  './assets/wolf/painted-cut-3.png',
+  './assets/wolf/painted-cut-4.png',
 ];
 
 self.addEventListener('install', (e) => {

@@ -54,7 +54,8 @@
       </div>
       <h1 class="ob-title">Name your pup.</h1>
       <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
-      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false">
+      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Wolf name">
+      <div class="ob-hint" id="nameHint" hidden>Give your wolf a name to continue.</div>
     </div>
 
     <!-- Page 2: Choose habits -->
@@ -184,7 +185,7 @@
       <div class="section-label">YOUR WOLF</div>
       <div class="info-card">
         <div class="field-row">
-          <input class="field-input" id="renameInput" maxlength="18" placeholder="Lupo" autocomplete="off">
+          <input class="field-input" id="renameInput" maxlength="18" placeholder="Lupo" autocomplete="off" aria-label="Wolf name">
           <button class="mini-btn" id="renameBtn" type="button">SAVE</button>
         </div>
       </div>
@@ -210,7 +211,7 @@
       <div class="info-card">
         <div class="toggle-row">
           <div><div class="ic-title">Daily reminder</div><div class="ic-sub">A nudge if your wolf hasn't been fed today.</div></div>
-          <button class="switch" id="reminderToggle" type="button" aria-pressed="false"></button>
+          <button class="switch" id="reminderToggle" type="button" aria-pressed="false" aria-label="Daily reminder"></button>
         </div>
       </div>
 
@@ -218,7 +219,7 @@
       <div class="info-card">
         <div class="toggle-row">
           <div><div class="ic-title">Sound effects</div><div class="ic-sub">Taps, habit chimes, level-ups, and the daily fanfare.</div></div>
-          <button class="switch on" id="soundToggle" type="button" aria-pressed="true"></button>
+          <button class="switch on" id="soundToggle" type="button" aria-pressed="true" aria-label="Sound effects"></button>
         </div>
       </div>
 

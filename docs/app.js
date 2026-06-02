@@ -54,6 +54,7 @@ function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=
 
 // ── State ──
 const STORE_KEY = 'lupo.v2';
+const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
 let pendingStageUp = false;
 
@@ -80,7 +81,16 @@ function load(){
   const def = defaultState();
   let parsed = null;
   try{ const raw = localStorage.getItem(STORE_KEY); if(raw) parsed = JSON.parse(raw); }
-  catch(e){ try{ const raw=localStorage.getItem(STORE_KEY); if(raw) localStorage.setItem(STORE_KEY+'.corrupt.'+Date.now(), raw); }catch(_){} parsed = null; }
+  catch(e){
+    try{
+      const raw=localStorage.getItem(STORE_KEY);
+      // keep a single fresh backup, drop older ones so dead copies can't pile up against the quota
+      Object.keys(localStorage).forEach(k=>{ if(k.indexOf(STORE_KEY+'.corrupt.')===0) localStorage.removeItem(k); });
+      if(raw){ try{ localStorage.setItem(STORE_KEY+'.corrupt.'+Date.now(), raw); }catch(_){} }
+      localStorage.removeItem(STORE_KEY); // clear the bad value so a clean default can persist
+    }catch(_){}
+    parsed = null;
+  }
   state = Object.assign({}, def, parsed || {});
   state.pet = Object.assign({}, def.pet, (parsed && parsed.pet) || {});
   state.habits = (parsed && typeof parsed.habits==='object' && parsed.habits) || def.habits;
@@ -92,14 +102,34 @@ function load(){
   ['energy','consistentDays','totalDaysTracked','missedDaysStreak','stage','tierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
   state.pet.energy = Math.max(0, Math.min(1, state.pet.energy));
   if(typeof state.pet.name!=='string' || !state.pet.name) state.pet.name='Lupo';
-  if(typeof state.pet.lastUpdated!=='string') state.pet.lastUpdated=new Date().toISOString();
-  if(typeof state.pet.lastScoredDay!=='string' || !/^\d{4}-\d\d-\d\d$/.test(state.pet.lastScoredDay)) state.pet.lastScoredDay = dateKey(startOfDay(new Date(state.pet.lastUpdated)));
+  let _lu = new Date(state.pet.lastUpdated);
+  if(typeof state.pet.lastUpdated!=='string' || isNaN(_lu.getTime())){ _lu=new Date(); state.pet.lastUpdated=_lu.toISOString(); }
+  if(typeof state.pet.lastScoredDay!=='string' || !/^\d{4}-\d\d-\d\d$/.test(state.pet.lastScoredDay)) state.pet.lastScoredDay = dateKey(startOfDay(_lu));
   if(state.timer && (typeof state.timer.dur!=='number' || typeof state.timer.start!=='number' || !HABITS[state.timer.key])) state.timer=null;
   if(typeof state.sound!=='boolean') state.sound=true;
   if(typeof state.tutorialSeen!=='boolean') state.tutorialSeen=false;
   if(typeof state.reminders!=='boolean') state.reminders=false;
+  // Wolf art is stored in its own key. Read it; migrate it out of an old combined blob if needed.
+  let artParsed=null;
+  try{ const ar=localStorage.getItem(ART_KEY); if(ar) artParsed=JSON.parse(ar); }catch(_){}
+  if(artParsed && typeof artParsed==='object'){ state.wolfArt=artParsed; }
+  else if(parsed && parsed.wolfArt && typeof parsed.wolfArt==='object' && Object.keys(parsed.wolfArt).length){ state.wolfArt=parsed.wolfArt; saveArt(); }
+  if(!state.wolfArt || typeof state.wolfArt!=='object') state.wolfArt={};
 }
-function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }catch(e){ return false; } }
+// Main state save. Excludes wolfArt (kept in its own key) so habit/streak data stays tiny and almost never hits quota.
+function save(){ try{ const m={}; for(const k in state){ if(k!=='wolfArt') m[k]=state[k]; } localStorage.setItem(STORE_KEY, JSON.stringify(m)); return true; }catch(e){ notifyStorageFull(); return false; } }
+function saveArt(){ try{ localStorage.setItem(ART_KEY, JSON.stringify(state.wolfArt||{})); return true; }catch(e){ notifyStorageFull(); return false; } }
+let _storageWarned=false;
+function notifyStorageFull(){
+  if(_storageWarned) return; _storageWarned=true;
+  try{
+    const t=document.createElement('div'); t.className='toast'; t.setAttribute('role','alert');
+    t.textContent='Storage is full so your latest change may not be saved. Free up space or remove custom wolf art.';
+    document.body.appendChild(t);
+    requestAnimationFrame(()=> t.classList.add('show'));
+    setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),400); _storageWarned=false; }, 6000);
+  }catch(e){ _storageWarned=false; }
+}
 
 // ── Dates ──
 function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -135,7 +165,11 @@ function checkForNewDay(){
   const today = startOfDay(new Date());
   let cursor = addDays(parseDayKey(state.pet.lastScoredDay), 1);
   if(cursor > today) cursor = new Date(today); // clock moved backward; nothing new to score
+  if(cursor >= today) return; // nothing new to score; don't touch state or storage
   const prevTier = state.pet.tierIdx;
+  // Snapshot so the whole scoring pass is all-or-nothing: if the write fails we roll back
+  // and retry next launch instead of re-applying missed-day penalties every boot.
+  const snap = { pet: Object.assign({}, state.pet), credited: state.creditedDays.slice() };
   while(cursor < today){
     const dk = dateKey(cursor);
     if(state.creditedDays.indexOf(dk) === -1){ // not already credited live that day
@@ -156,6 +190,11 @@ function checkForNewDay(){
   state.pet.tierIdx = tierIdx(levelOf());
   state.pet.lastUpdated = new Date().toISOString();
   ensureLog(todayKey());
+  if(!save()){ // couldn't persist; undo so we don't lose or double-apply the streak math
+    state.pet = snap.pet; state.creditedDays = snap.credited;
+    return;
+  }
+  // persisted, so it's now safe to trim history
   if(state.creditedDays.length > 120) state.creditedDays = state.creditedDays.slice(-120);
   const cut = dateKey(addDays(today, -90));
   Object.keys(state.logs).forEach(k=>{ if(k < cut) delete state.logs[k]; });
@@ -184,6 +223,24 @@ function maybeCreditToday(){
   if(leveled){ pendingStageUp=false; showStageUp(); }
   return leveled; // true only when a NEW FORM overlay was shown (so callers suppress the day-complete popup)
 }
+// Reverse a same-day credit when the user unchecks a required habit so the streak can't stay inflated.
+function uncreditToday(){
+  const tk=todayKey(); const i=state.creditedDays.indexOf(tk);
+  if(i===-1) return false;
+  state.creditedDays.splice(i,1);
+  state.pet.consistentDays = Math.max(0, state.pet.consistentDays-1);
+  state.pet.totalDaysTracked = Math.max(0, state.pet.totalDaysTracked-1);
+  state.pet.energy = Math.max(0, state.pet.energy-0.2);
+  state.pet.mood = moodForEnergy(state.pet.energy);
+  state.pet.stage = band(levelOf());
+  state.pet.tierIdx = tierIdx(levelOf());
+  state.pet.lastUpdated = new Date().toISOString();
+  if(state.lastCelebratedDay===tk) state.lastCelebratedDay=null; // let the "good job" popup fire again if they re-complete
+  save();
+  if(!screens.home.hidden) renderHome();
+  if(!screens.journey.hidden) renderJourney();
+  return true;
+}
 function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mood=moodForEnergy(state.pet.energy); save(); }
 
 // ── Timer (Forest-style countdown; persists via timestamps) ──
@@ -191,7 +248,7 @@ function startTimer(k){ state.timer={key:k,start:Date.now(),dur:targetMs(k)}; sa
 function cancelTimer(){ state.timer=null; save(); }
 function timerLeftMs(){ if(!state.timer || !Number.isFinite(state.timer.dur) || !Number.isFinite(state.timer.start)) return 0; return Math.max(0, state.timer.dur-(Date.now()-state.timer.start)); }
 function timerFrac(){ if(!state.timer || !Number.isFinite(state.timer.dur) || state.timer.dur<=0) return 0; return Math.min(1,(Date.now()-state.timer.start)/state.timer.dur); }
-function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; const day=dateKey(new Date(state.timer.start)); ensureLog(day)[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
+function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; const day=todayKey(); ensureLog(day)[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
 function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
   return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(sec).padStart(2,'0'); }
 let tickStarted=false;
@@ -214,7 +271,9 @@ const RENDER = { home:renderHome, habits:renderHabits, journey:renderJourney, st
 function haptic(ms){ try{ if(navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) navigator.vibrate(ms); }catch(e){} }
 function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
 function stagger(nodes, base){ base=base||0; nodes.forEach((k,i)=>{ k.classList.remove('rise'); k.style.animationDelay=(base+i*50)+'ms'; void k.offsetWidth; k.classList.add('rise'); }); }
-function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700; const s=performance.now();
+function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700;
+  if(reduceMotion()){ el.textContent=Math.round(to)+suffix; return; }
+  const s=performance.now();
   (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1)requestAnimationFrame(tick); })(performance.now()); }
 function handleWolfUpload(file, band){
   const r=new FileReader();
@@ -226,7 +285,7 @@ function handleWolfUpload(file, band){
       let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ url=r.result; }
       if(!state.wolfArt) state.wolfArt={};
       const prev=state.wolfArt[band]; state.wolfArt[band]=url;
-      if(!save()){ if(prev===undefined) delete state.wolfArt[band]; else state.wolfArt[band]=prev; alert('That image is too large to store. Try a smaller one.'); return; }
+      if(!saveArt()){ if(prev===undefined) delete state.wolfArt[band]; else state.wolfArt[band]=prev; alert('That image is too large to store. Try a smaller one.'); return; }
       haptic(12); renderProfile();
     };
     img.src=r.result;
@@ -285,7 +344,11 @@ function renderHome(){
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   drawWolfScene('wolfHome', tierIdx(lvl));
-  const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer'; hw.addEventListener('click', petWolf); }
+  const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer';
+    hw.setAttribute('role','button'); hw.setAttribute('tabindex','0');
+    hw.addEventListener('click', petWolf);
+    hw.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){ e.preventDefault(); petWolf(); } }); }
+  if(hw) hw.setAttribute('aria-label','Pet '+(p.name||'your wolf'));
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
 
@@ -308,7 +371,8 @@ function renderHome(){
     it.innerHTML=`<div class="quick-ico ${done?'done':''}">${HABITS[k].icon}</div><div class="quick-dot ${done?'done':''}"></div>`; quick.appendChild(it); });
 
   const cta = document.getElementById('homeCta');
-  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ Done today. ${p.name} leveled up.</div>`; }
+  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ All done today. ${p.name} grew stronger.</div>`; }
+  else if(logAllRequiredDone(entry)){ cta.innerHTML = `<div class="cta-done partial">✓ ${p.name} is fed. Finish the rest for a full day.</div>`; }
   else { cta.innerHTML = `<button class="btn-primary cta-log" type="button">LOG TODAY</button>`; cta.querySelector('button').addEventListener('click',()=>switchScreen('habits')); }
 }
 
@@ -356,6 +420,7 @@ function toggleAndRefresh(k,card){
   haptic(nowAll&&!wasAll?[12,40,18]:12);
   let leveled=false;
   if(nowAll&&!wasAll){ celebrateWolf('wolfHome'); leveled = maybeCreditToday(); }
+  else if(!nowAll&&wasAll){ uncreditToday(); }
   if(!leveled) maybeDayComplete();
   updateHabitCompletion(false);
 }
@@ -434,9 +499,14 @@ function renderStats(){
   hm.querySelectorAll('.heat-sq').forEach((sq,i)=>setTimeout(()=>sq.classList.add('show'),i*35+50));
 
   const wl=document.getElementById('weekList'); wl.innerHTML=''; const eh=enabledHabits();
+  const priorKeys=Object.keys(state.logs).filter(k=>k!==todayKey());
+  if(p.totalDaysTracked===0 && priorKeys.length===0){
+    wl.innerHTML=`<div class="week-empty">No history yet. Feed ${p.name} today and your streak starts right here.</div>`;
+    return;
+  }
   for(let off=6;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const e=state.logs[dateKey(d)];
     const lbl=d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase(); const row=document.createElement('div'); row.className='week-row';
-    if(!e){ row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-none">no data</div>`; }
+    if(!e){ row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-none">NO DATA</div>`; }
     else{ const dots=eh.map(k=>`<div class="week-dot" style="background:${e[k]?'var(--success)':'var(--gray3)'}"></div>`).join('');
       row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-dots">${dots}</div><div class="week-end">${logAllRequiredDone(e)?'✅':'❌'}</div>`; }
     wl.appendChild(row); }
@@ -464,7 +534,7 @@ function renderProfile(){
     row.innerHTML=`<div class="manage-top">
         <div class="manage-ico">${h.icon}</div>
         <div class="manage-name">${h.name}${locked?' <span class="lock-tag">REQUIRED</span>':''}</div>
-        <button class="switch ${on?'on':''}" ${locked?'disabled':''} aria-pressed="${on}"></button>
+        <button class="switch ${on?'on':''}" ${locked?'disabled':''} aria-pressed="${on}" aria-label="${h.name}${locked?' (required, always on)':''}"></button>
       </div>
       <div class="manage-bot">
         <div class="manage-target">${h.kind==='limit'?'Goal · under ':'Goal · '}${targetShort(k)}</div>
@@ -478,7 +548,7 @@ function renderProfile(){
   const st=document.getElementById('soundToggle'); if(st){ st.classList.toggle('on',!!state.sound); st.setAttribute('aria-pressed',!!state.sound); }
 }
 document.getElementById('soundToggle').addEventListener('click',()=>{ state.sound=!state.sound; if(window.Sound) Sound.on(state.sound); save(); haptic(10); if(state.sound && window.Sound) Sound.tap(); renderProfile(); });
-document.getElementById('clearArtBtn').addEventListener('click',()=>{ state.wolfArt={}; save(); haptic(10); renderProfile(); });
+document.getElementById('clearArtBtn').addEventListener('click',()=>{ state.wolfArt={}; saveArt(); haptic(10); renderProfile(); });
 document.getElementById('renameBtn').addEventListener('click',()=>{ const v=document.getElementById('renameInput').value.trim()||'Lupo'; state.pet.name=v; save(); haptic(12); const b=document.getElementById('renameBtn'); b.textContent='SAVED'; setTimeout(()=>b.textContent='SAVE',1000); });
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
   haptic(10);
@@ -513,7 +583,7 @@ function scheduleReminder(){
 }
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(confirm('Reset ALL progress? Your wolf goes back to a newborn pup. This cannot be undone.')){
-    localStorage.removeItem(STORE_KEY); load(); startOnboarding();
+    localStorage.removeItem(STORE_KEY); localStorage.removeItem(ART_KEY); load(); startOnboarding();
   }
 });
 
@@ -528,17 +598,47 @@ function burstConfetti(host){
     c.animate([{transform:'translate(-50%,-50%) rotate(0)',opacity:1},{transform:`translate(${Math.cos(ang)*dist-50}%,${Math.sin(ang)*dist-50}%) rotate(${Math.random()*720-360}deg)`,opacity:0}],{duration:900+Math.random()*600,easing:'cubic-bezier(.2,.7,.3,1)'});
     setTimeout(()=>c.remove(),1600); }
 }
+// ── Accessible modal overlays (focus move + trap, Escape to close, background inert) ──
+let _modalReturn=null;
+const MODAL_LABEL={stageUp:'stageUpName',dayComplete:'dayCompleteMsg',tutorial:'tutTitle'};
+function openModal(id){
+  const m=document.getElementById(id); if(!m) return;
+  m.hidden=false; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true');
+  if(MODAL_LABEL[id]) m.setAttribute('aria-labelledby',MODAL_LABEL[id]);
+  const am=document.getElementById('appMain'); if(am && !am.hidden) am.setAttribute('aria-hidden','true');
+  _modalReturn=document.activeElement;
+  const f=m.querySelector('button, [href], input, [tabindex]'); if(f) setTimeout(()=>{ try{ f.focus(); }catch(e){} },30);
+}
+function closeModal(id){
+  const m=document.getElementById(id); if(!m) return; m.hidden=true;
+  const am=document.getElementById('appMain'); if(am) am.removeAttribute('aria-hidden');
+  if(_modalReturn && _modalReturn.focus){ try{ _modalReturn.focus(); }catch(e){} } _modalReturn=null;
+}
+document.addEventListener('keydown',(e)=>{
+  const open=document.querySelector('.stageup:not([hidden])'); if(!open) return;
+  if(e.key==='Escape'){
+    if(open.id==='tutorial'){ closeModal('tutorial'); if(state){ state.tutorialSeen=true; save(); } }
+    else closeModal(open.id);
+    haptic(10); return;
+  }
+  if(e.key==='Tab'){
+    const f=[...open.querySelectorAll('button, [href], input:not([type="hidden"]), [tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled && !el.hidden);
+    if(!f.length) return; const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+});
 function showStageUp(){
   const lvl=levelOf(), idx=tierIdx(lvl);
   document.querySelector('.stageup-kicker').textContent='NEW FORM';
   document.getElementById('stageUpName').textContent=TIERS[idx].name.toUpperCase();
   document.getElementById('stageUpTag').textContent=BAND_TAG[band(lvl)];
   drawWolfScene('wolfStageUp', tierIdx(lvl));
-  document.getElementById('stageUp').hidden=false;
+  openModal('stageUp');
   haptic([18,60,30,60,40]); if(window.Sound) Sound.level(); celebrateWolf('wolfStageUp');
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);
 }
-document.getElementById('stageUpBtn').addEventListener('click',()=>{ document.getElementById('stageUp').hidden=true; haptic(10); });
+document.getElementById('stageUpBtn').addEventListener('click',()=>{ closeModal('stageUp'); haptic(10); });
 
 // ── Day complete "good job" ──
 function maybeDayComplete(){
@@ -548,12 +648,12 @@ function maybeDayComplete(){
   return false;
 }
 function showDayComplete(){
-  document.getElementById('dayCompleteSub').textContent = state.pet.name + " leveled up today. Come back tomorrow and keep the streak alive.";
-  document.getElementById('dayComplete').hidden=false;
+  document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew stronger today. Come back tomorrow and keep the streak alive.";
+  openModal('dayComplete');
   haptic([14,50,24,50,30]); if(window.Sound) Sound.day();
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
 }
-document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ document.getElementById('dayComplete').hidden=true; haptic(10); });
+document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ closeModal('dayComplete'); haptic(10); });
 
 // ── First-run tutorial ──
 const TUT=[
@@ -563,7 +663,7 @@ const TUT=[
   {i:4, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
 ];
 let tutI=0;
-function showTutorial(){ tutI=0; document.getElementById('tutorial').hidden=false; renderTut(); }
+function showTutorial(){ tutI=0; openModal('tutorial'); renderTut(); }
 function renderTut(){
   const s=TUT[tutI];
   drawWolfScene('tutWolf', s.i);
@@ -574,7 +674,7 @@ function renderTut(){
 }
 document.getElementById('tutNext').addEventListener('click',()=>{ haptic(10);
   if(tutI<TUT.length-1){ tutI++; renderTut(); }
-  else { document.getElementById('tutorial').hidden=true; state.tutorialSeen=true; save(); }
+  else { closeModal('tutorial'); state.tutorialSeen=true; save(); }
 });
 
 // ═══════════════════════════════════════════════════════
@@ -591,7 +691,7 @@ function renderOnboarding(){
   document.querySelectorAll('.ob-page').forEach(p=>p.hidden=(+p.dataset.page!==obPage));
   document.querySelectorAll('.ob-dot').forEach(d=>d.classList.toggle('active',+d.dataset.d===obPage));
   const next=document.getElementById('obNext'); next.textContent=obPage===2?'BEGIN':'CONTINUE';
-  if(obPage===1){ drawWolfScene('wolfName', 0); next.disabled=document.getElementById('petNameInput').value.trim().length===0; }
+  if(obPage===1){ drawWolfScene('wolfName', 0); const empty=document.getElementById('petNameInput').value.trim().length===0; next.disabled=empty; const nh=document.getElementById('nameHint'); if(nh) nh.hidden=!empty; }
   else next.disabled=false;
   if(obPage===2 && !document.getElementById('obHabitList').dataset.built) buildHabitChooser();
 }
@@ -604,7 +704,7 @@ function buildHabitChooser(){
     if(!locked) row.addEventListener('click',()=>{ const on=row.classList.toggle('on'); if(on)obSelected.push(k); else obSelected=obSelected.filter(x=>x!==k); haptic(8); });
     list.appendChild(row); });
 }
-document.getElementById('petNameInput').addEventListener('input',()=>{ document.getElementById('obNext').disabled=document.getElementById('petNameInput').value.trim().length===0; });
+document.getElementById('petNameInput').addEventListener('input',()=>{ const empty=document.getElementById('petNameInput').value.trim().length===0; document.getElementById('obNext').disabled=empty; const nh=document.getElementById('nameHint'); if(nh) nh.hidden=!empty; });
 document.getElementById('obSkip').addEventListener('click',()=>{ obPage=2; renderOnboarding(); });
 document.getElementById('obNext').addEventListener('click',()=>{ haptic(10); if(obPage<2){ obPage++; renderOnboarding(); return; }
   completeOnboarding(document.getElementById('petNameInput').value.trim()||'Lupo', obSelected); });
