@@ -62,6 +62,7 @@ function defaultState(){
     tutorialSeen:false,
     lastCelebratedDay:null,
     sound:true,
+    wolfArt:{},
     pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
           consistentDays:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
@@ -82,6 +83,7 @@ function load(){
   if(state.tutorialSeen === undefined) state.tutorialSeen = false;
   if(state.lastCelebratedDay === undefined) state.lastCelebratedDay = null;
   if(state.sound === undefined) state.sound = true;
+  if(!state.wolfArt) state.wolfArt = {};
 }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -176,7 +178,30 @@ function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.cl
 function stagger(nodes, base){ base=base||0; nodes.forEach((k,i)=>{ k.classList.remove('rise'); k.style.animationDelay=(base+i*50)+'ms'; void k.offsetWidth; k.classList.add('rise'); }); }
 function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700; const s=performance.now();
   (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1)requestAnimationFrame(tick); })(performance.now()); }
-function setWolf(id,m){ LupoWolf.renderWolf(id,m); }
+function artBand(m){ return Math.min(Math.floor(m*5),4); }
+function setWolf(id,m){
+  const el=document.getElementById(id); if(!el) return;
+  const b=artBand(m), art=state.wolfArt && state.wolfArt[b];
+  if(art){ const key='art'+b; if(el.dataset.art!==key){ el.dataset.art=key; el.dataset.m=''; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+art+'" alt="Lupo">'; } return; }
+  if(el.dataset.art){ el.dataset.art=''; el.dataset.m=''; }
+  LupoWolf.renderWolf(id,m);
+}
+function handleWolfUpload(file, band){
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image();
+    img.onload=()=>{ const max=440; const sc=Math.min(1, max/Math.max(img.width,img.height));
+      const cw=Math.round(img.width*sc), ch=Math.round(img.height*sc);
+      const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+      cv.getContext('2d').drawImage(img,0,0,cw,ch);
+      let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ url=r.result; }
+      if(!state.wolfArt) state.wolfArt={}; state.wolfArt[band]=url;
+      try{ save(); }catch(e){ alert('That image is too large to store. Try a smaller one.'); return; }
+      haptic(12); renderProfile();
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(file);
+}
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),700); }
 function petWolf(){
   celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
@@ -374,8 +399,18 @@ function renderStats(){
 // ═══════════════════════════════════════════════════════
 //  PROFILE
 // ═══════════════════════════════════════════════════════
+const ART_LABELS=['Pup','Young','Teen','Sub','Adult'];
 function renderProfile(){
   document.getElementById('renameInput').value = state.pet.name;
+  const as=document.getElementById('artSlots');
+  if(as){ as.innerHTML='';
+    for(let b=0;b<5;b++){ const art=state.wolfArt && state.wolfArt[b];
+      const slot=document.createElement('label'); slot.className='art-slot'+(art?' filled':'');
+      slot.innerHTML=(art?`<img src="${art}" alt="">`:`<div class="as-plus">+</div>`)+`<div class="as-lbl">${ART_LABELS[b].toUpperCase()}</div><input type="file" accept="image/*" hidden>`;
+      slot.querySelector('input').addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; if(f) handleWolfUpload(f,b); });
+      as.appendChild(slot);
+    }
+  }
   const ml=document.getElementById('manageList'); ml.innerHTML='';
   HABIT_ORDER.forEach(k=>{
     const h=HABITS[k], on=state.habits[k].enabled, locked=h.required;
@@ -397,6 +432,7 @@ function renderProfile(){
   const st=document.getElementById('soundToggle'); if(st){ st.classList.toggle('on',!!state.sound); st.setAttribute('aria-pressed',!!state.sound); }
 }
 document.getElementById('soundToggle').addEventListener('click',()=>{ state.sound=!state.sound; if(window.Sound) Sound.on(state.sound); save(); haptic(10); if(state.sound && window.Sound) Sound.tap(); renderProfile(); });
+document.getElementById('clearArtBtn').addEventListener('click',()=>{ state.wolfArt={}; save(); haptic(10); renderProfile(); });
 document.getElementById('renameBtn').addEventListener('click',()=>{ const v=document.getElementById('renameInput').value.trim()||'Lupo'; state.pet.name=v; save(); haptic(12); const b=document.getElementById('renameBtn'); b.textContent='SAVED'; setTimeout(()=>b.textContent='SAVE',1000); });
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
   if(!state.reminders){ if('Notification' in window){ try{ await Notification.requestPermission(); }catch(e){} } state.reminders=true; }
