@@ -385,15 +385,16 @@ canvas{display:block;}
 .wolf-cut{position:relative;z-index:2;width:auto;object-fit:contain;display:block;cursor:pointer;
   filter:drop-shadow(0 -2px 2px rgba(248,224,170,.42)) drop-shadow(2px 0 2px rgba(120,150,210,.12)) drop-shadow(0 16px 20px rgba(0,0,0,.55));
   animation:wolfIdle 4.6s ease-in-out infinite;transform-origin:50% 100%;}
-@keyframes wolfIdle{0%,100%{transform:translateY(0) scaleY(1) rotate(0);}50%{transform:translateY(-6px) scaleY(1.02) scaleX(.993) rotate(.4deg);}}
+@keyframes wolfIdle{0%,100%{transform:translateY(0) scaleY(1) rotate(0);}50%{transform:translateY(-4px) scaleY(1.014) scaleX(.995) rotate(.3deg);}}
 .wolf-cut.pet{animation:wolfPet .6s var(--spring);}
 @keyframes wolfPet{0%{transform:scale(.9);}55%{transform:scale(1.09) translateY(-8px);}100%{transform:scale(1);}}
-.wolf-card .scene{min-height:330px;} .wolf-card .wolf-cut{height:262px;}
-.journey-hero .scene{min-height:330px;} .journey-hero .wolf-cut{height:262px;}
-#wolfStageUp .scene{min-height:262px;} #wolfStageUp .wolf-cut{height:206px;}
-#tutWolf .scene{min-height:244px;} #tutWolf .wolf-cut{height:188px;}
-.ob-wolf-wrap .scene{min-height:300px;} .ob-wolf-wrap .wolf-cut{height:244px;}
-.ob-wolf-wrap.small .scene,.wolf-portrait.sm .scene{min-height:222px;} .wolf-portrait.sm .wolf-cut{height:176px;}
+/* wolf render heights kept well under the scene height so the FULL body (ears to paws) always shows with air, even at the top of the idle bob */
+.wolf-card .scene{min-height:336px;} .wolf-card .wolf-cut{height:228px;}
+.journey-hero .scene{min-height:336px;} .journey-hero .wolf-cut{height:228px;}
+#wolfStageUp .scene{min-height:262px;} #wolfStageUp .wolf-cut{height:178px;}
+#tutWolf .scene{min-height:246px;} #tutWolf .wolf-cut{height:166px;}
+.ob-wolf-wrap .scene{min-height:300px;} .ob-wolf-wrap .wolf-cut{height:214px;}
+.ob-wolf-wrap.small .scene,.wolf-portrait.sm .scene{min-height:224px;} .wolf-portrait.sm .wolf-cut{height:158px;}
 
 /* film grain so the dark gradients read as filmic texture, not flat vector banding */
 #grain{position:fixed;inset:0;z-index:80;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
