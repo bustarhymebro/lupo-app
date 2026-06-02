@@ -63,6 +63,7 @@ function defaultState(){
     reminders:false,
     tutorialSeen:false,
     lastCelebratedDay:null,
+    creditedDays:[],
     sound:true,
     wolfArt:{},
     pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
@@ -85,6 +86,7 @@ function load(){
   state.habits = (parsed && typeof parsed.habits==='object' && parsed.habits) || def.habits;
   if(!state.logs || typeof state.logs!=='object') state.logs = {};
   if(!state.wolfArt || typeof state.wolfArt!=='object') state.wolfArt = {};
+  if(!Array.isArray(state.creditedDays)) state.creditedDays = [];
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
   if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
   ['energy','consistentDays','totalDaysTracked','missedDaysStreak','stage','tierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
@@ -133,17 +135,15 @@ function checkForNewDay(){
   if(cursor >= today) return;
   const prevTier = state.pet.tierIdx;
   while(cursor < today){
-    const entry = state.logs[dateKey(cursor)];
-    const success = logAllRequiredDone(entry);
+    const dk = dateKey(cursor);
     state.pet.totalDaysTracked += 1;
-    if(success){
-      state.pet.consistentDays += 1;
-      state.pet.missedDaysStreak = 0;
-      state.pet.energy = Math.min(1, state.pet.energy + 0.2);
-    }else{
-      state.pet.missedDaysStreak += 1;
-      state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1);
-      state.pet.energy = Math.max(0, state.pet.energy - 0.15);
+    if(state.creditedDays.indexOf(dk) !== -1){
+      // success already credited live on that day; do not re-count
+    } else if(logAllRequiredDone(state.logs[dk])){
+      state.pet.consistentDays += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
+      state.creditedDays.push(dk);
+    } else {
+      state.pet.missedDaysStreak += 1; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
       if(state.pet.missedDaysStreak >= 3) state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 2);
     }
     cursor = addDays(cursor,1);
@@ -153,8 +153,29 @@ function checkForNewDay(){
   state.pet.tierIdx = tierIdx(levelOf());
   state.pet.lastUpdated = new Date().toISOString();
   ensureLog(todayKey());
+  if(state.creditedDays.length > 60) state.creditedDays = state.creditedDays.slice(-60);
   if(state.pet.tierIdx > prevTier) pendingStageUp = true;
   save();
+}
+// Immediate same-day growth: finishing your required habits levels the wolf now.
+function maybeCreditToday(){
+  const tk = todayKey();
+  if(state.creditedDays.indexOf(tk) !== -1) return false;
+  if(!logAllRequiredDone(ensureLog(tk))) return false;
+  const prevTier = state.pet.tierIdx;
+  state.creditedDays.push(tk);
+  state.pet.consistentDays += 1;
+  state.pet.missedDaysStreak = 0;
+  state.pet.energy = Math.min(1, state.pet.energy + 0.2);
+  state.pet.mood = moodForEnergy(state.pet.energy);
+  state.pet.stage = band(levelOf());
+  state.pet.tierIdx = tierIdx(levelOf());
+  state.pet.lastUpdated = new Date().toISOString();
+  save();
+  if(!screens.home.hidden) renderHome();
+  if(!screens.journey.hidden) renderJourney();
+  if(state.pet.tierIdx > prevTier){ pendingStageUp=false; showStageUp(); }
+  return true;
 }
 function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mood=moodForEnergy(state.pet.energy); save(); }
 
@@ -170,7 +191,7 @@ let tickStarted=false;
 function startTick(){ if(tickStarted) return; tickStarted=true; setInterval(()=>{
   if(!state || !state.timer) return;
   const done=checkTimer();
-  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); maybeDayComplete(); return; }
+  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); maybeCreditToday(); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); maybeDayComplete(); return; }
   const left=fmtClock(timerLeftMs()), off=String((1-timerFrac())*(2*Math.PI*26));
   document.querySelectorAll('[data-timer-clock]').forEach(el=> el.textContent=left);
   document.querySelectorAll('[data-timer-ring]').forEach(el=> el.style.strokeDashoffset=off);
@@ -268,7 +289,7 @@ function renderHome(){
     it.innerHTML=`<div class="quick-ico ${done?'done':''}">${HABITS[k].icon}</div><div class="quick-dot ${done?'done':''}"></div>`; quick.appendChild(it); });
 
   const cta = document.getElementById('homeCta');
-  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ Fed for today. ${p.name} grows by morning.</div>`; }
+  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ Done today. ${p.name} leveled up.</div>`; }
   else { cta.innerHTML = `<button class="btn-primary cta-log" type="button">LOG TODAY</button>`; cta.querySelector('button').addEventListener('click',()=>switchScreen('habits')); }
 }
 
@@ -314,7 +335,7 @@ function toggleAndRefresh(k,card){
   if(isDone && window.Sound) Sound.check();
   const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
   haptic(nowAll&&!wasAll?[12,40,18]:12);
-  if(nowAll&&!wasAll) celebrateWolf('wolfHome');
+  if(nowAll&&!wasAll){ celebrateWolf('wolfHome'); maybeCreditToday(); }
   maybeDayComplete();
   updateHabitCompletion(false);
 }
@@ -506,7 +527,7 @@ function maybeDayComplete(){
   return false;
 }
 function showDayComplete(){
-  document.getElementById('dayCompleteSub').textContent = state.pet.name + " is fed for today. He grows by morning. Come back tomorrow and keep the streak.";
+  document.getElementById('dayCompleteSub').textContent = state.pet.name + " leveled up today. Come back tomorrow and keep the streak alive.";
   document.getElementById('dayComplete').hidden=false;
   haptic([14,50,24,50,30]); if(window.Sound) Sound.day();
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
