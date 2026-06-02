@@ -78,8 +78,8 @@ canvas{display:block;}
 .ob-skip{position:absolute;top:calc(var(--safe-top) + 12px);right:14px;color:var(--gray);font-size:13px;z-index:5;padding:10px 12px;min-height:44px;display:inline-flex;align-items:center;}
 .ob-page{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;animation:obIn .5s var(--ease);}
 @keyframes obIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
-.ob-wolf-wrap{height:280px;width:100%;display:flex;align-items:center;justify-content:center;}
-.ob-wolf-wrap.small{height:200px;}
+.ob-wolf-wrap{height:312px;width:100%;display:flex;align-items:center;justify-content:center;}
+.ob-wolf-wrap.small{height:232px;}
 .ob-title{font-family:var(--display);font-size:42px;font-weight:800;letter-spacing:-1.5px;line-height:1.02;}
 .ob-title.small{font-size:34px;}
 .ob-sub{font-size:15px;color:var(--gray);line-height:1.6;max-width:300px;}
@@ -355,10 +355,11 @@ canvas{display:block;}
 .ob-wolf-wrap.small .wolf-photo,.wolf-portrait.sm .wolf-photo{max-height:208px;}
 #wolfStageUp .wolf-photo{max-height:232px;}
 #tutWolf .wolf-photo{max-height:210px;}
-.tier-thumb .wolf-photo,.growth-img .wolf-photo{width:100%;height:100%;max-width:none;border-radius:11px;object-fit:cover;object-position:center 28%;animation:none;filter:none;}
+.tier-thumb .wolf-photo,.growth-img .wolf-photo{width:100%;height:100%;max-width:none;padding:4px;border-radius:11px;object-fit:contain;object-position:center bottom;animation:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));}
 
 /* ── animated wolf scene (cutout on a live background) ── */
 .scene{position:relative;width:100%;height:100%;min-height:300px;overflow:hidden;display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:16px;box-sizing:border-box;
   background:radial-gradient(120% 78% at 50% 26%,rgba(245,181,68,.07),transparent 62%);}
 /* soft luminous moon: a glow that fades to nothing so it never reads as a hard disc or a clipped box */
 .scene-moon{position:absolute;top:4%;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;
@@ -370,19 +371,19 @@ canvas{display:block;}
 /* grounded pool of light + a soft contact shadow so the wolf stands on something */
 .scene-ground{position:absolute;bottom:0;left:0;right:0;height:40%;pointer-events:none;
   background:radial-gradient(ellipse 58% 70% at 50% 116%,rgba(245,181,68,.20),rgba(245,181,68,.06) 45%,transparent 72%);}
-.scene-ground::after{content:'';position:absolute;bottom:13%;left:50%;transform:translateX(-50%);width:46%;height:16px;border-radius:50%;
-  background:radial-gradient(ellipse at center,rgba(0,0,0,.42),transparent 72%);filter:blur(2px);}
+.scene-ground::after{content:'';position:absolute;bottom:34px;left:50%;transform:translateX(-50%);width:44%;height:15px;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,.38),transparent 72%);filter:blur(2px);}
 .wolf-cut{position:relative;z-index:2;width:auto;object-fit:contain;display:block;cursor:pointer;
   filter:drop-shadow(0 14px 22px rgba(0,0,0,.55));animation:wolfIdle 4.6s ease-in-out infinite;transform-origin:50% 100%;}
 @keyframes wolfIdle{0%,100%{transform:translateY(0) scaleY(1) rotate(0);}50%{transform:translateY(-8px) scaleY(1.018) rotate(.5deg);}}
 .wolf-cut.pet{animation:wolfPet .6s var(--spring);}
 @keyframes wolfPet{0%{transform:scale(.9);}55%{transform:scale(1.09) translateY(-8px);}100%{transform:scale(1);}}
-.wolf-card .scene{min-height:300px;} .wolf-card .wolf-cut{height:270px;}
-.journey-hero .scene{min-height:300px;} .journey-hero .wolf-cut{height:270px;}
-#wolfStageUp .scene{min-height:240px;} #wolfStageUp .wolf-cut{height:215px;}
-#tutWolf .scene{min-height:220px;} #tutWolf .wolf-cut{height:195px;}
-.ob-wolf-wrap .scene{min-height:270px;} .ob-wolf-wrap .wolf-cut{height:250px;}
-.ob-wolf-wrap.small .scene,.wolf-portrait.sm .scene{min-height:200px;} .wolf-portrait.sm .wolf-cut{height:185px;}
+.wolf-card .scene{min-height:330px;} .wolf-card .wolf-cut{height:262px;}
+.journey-hero .scene{min-height:330px;} .journey-hero .wolf-cut{height:262px;}
+#wolfStageUp .scene{min-height:262px;} #wolfStageUp .wolf-cut{height:206px;}
+#tutWolf .scene{min-height:244px;} #tutWolf .wolf-cut{height:188px;}
+.ob-wolf-wrap .scene{min-height:300px;} .ob-wolf-wrap .wolf-cut{height:244px;}
+.ob-wolf-wrap.small .scene,.wolf-portrait.sm .scene{min-height:222px;} .wolf-portrait.sm .wolf-cut{height:176px;}
 
 /* ── Accessibility ── */
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:8px;}
