@@ -1,5 +1,5 @@
 // Lupo service worker. Offline-first cache
-const CACHE = 'lupo-v14';
+const CACHE = 'lupo-v15';
 const ASSETS = [
   './',
   './index.html',
@@ -26,18 +26,20 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Network-first for same-origin so a returning user always gets the latest build;
+// fall back to cache only when offline. Cross-origin (fonts) left to the browser.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  let sameOrigin = false;
+  try { sameOrigin = new URL(e.request.url).origin === location.origin; } catch (_) {}
+  if (!sameOrigin) return;
   e.respondWith(
-    caches.match(e.request).then((cached) =>
-      cached || fetch(e.request).then((res) => {
-        try{ const u = new URL(e.request.url);
-          if(res && res.ok && res.type === 'basic' && u.origin === location.origin){
-            const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
-          }
-        }catch(_){}
-        return res;
-      }).catch(() => cached)
-    )
+    fetch(e.request).then((res) => {
+      if (res && res.ok && res.type === 'basic') {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() => caches.match(e.request).then((c) => c || caches.match('./index.html')))
   );
 });
