@@ -13,7 +13,7 @@ const TIERS = [
   {at:75, name:'Full Grown'},
 ];
 function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k].at) i=k; } return i; }
-const PAINTED=['assets/wolf/painted-0.jpg','assets/wolf/painted-1.jpg','assets/wolf/painted-2.jpg','assets/wolf/painted-3.jpg','assets/wolf/painted-4.jpg'];
+const PAINTED=['assets/wolf/painted-cut-0.png','assets/wolf/painted-cut-1.png','assets/wolf/painted-cut-2.png','assets/wolf/painted-cut-3.png','assets/wolf/painted-cut-4.png'];
 function wolfImg(i){ i=Math.max(0,Math.min(4, i|0)); return (state && state.wolfArt && state.wolfArt[i]) || PAINTED[i]; }
 function drawWolf(idOrEl, i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el) return; const src=wolfImg(i); const key='w:'+src; if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+src+'" alt="Lupo">'; } }
 
@@ -205,7 +205,9 @@ function handleWolfUpload(file, band){
   };
   r.readAsDataURL(file);
 }
-function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),700); }
+function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; const cut=el.querySelector('.wolf-cut'); const t=cut||el; const cls=cut?'pet':'pop'; t.classList.remove('pet','pop'); void t.offsetWidth; t.classList.add(cls); setTimeout(()=>t.classList.remove('pet','pop'),700); }
+function sceneStars(){ const pos=[[16,20],[38,12],[66,16],[82,28],[26,38],[58,32],[74,46]]; return pos.map(([l,t])=>`<span class="scene-star" style="left:${l}%;top:${t}%;animation-delay:${((l%5)*0.4).toFixed(1)}s"></span>`).join(''); }
+function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src; if(el.dataset.w===key) return; el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}<div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
 function petWolf(){
   celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
   const card=document.querySelector('.wolf-card'); if(!card) return;
@@ -242,7 +244,7 @@ function renderHome(){
   document.getElementById('streakCount').textContent = lvl;
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
-  drawWolf('wolfHome', tierIdx(lvl));
+  drawWolfScene('wolfHome', tierIdx(lvl));
   const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer'; hw.addEventListener('click', petWolf); }
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
@@ -342,7 +344,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{ save(); const 
 function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
-  drawWolf('wolfJourney', tierIdx(lvl));
+  drawWolfScene('wolfJourney', tierIdx(lvl));
   document.getElementById('journeyLevel').textContent='LV '+lvl;
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
@@ -489,7 +491,7 @@ function showStageUp(){
   document.querySelector('.stageup-kicker').textContent='NEW FORM';
   document.getElementById('stageUpName').textContent=TIERS[idx].name.toUpperCase();
   document.getElementById('stageUpTag').textContent=BAND_TAG[band(lvl)];
-  drawWolf('wolfStageUp', tierIdx(lvl));
+  drawWolfScene('wolfStageUp', tierIdx(lvl));
   document.getElementById('stageUp').hidden=false;
   haptic([18,60,30,60,40]); if(window.Sound) Sound.level(); celebrateWolf('wolfStageUp');
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);
@@ -522,7 +524,7 @@ let tutI=0;
 function showTutorial(){ tutI=0; document.getElementById('tutorial').hidden=false; renderTut(); }
 function renderTut(){
   const s=TUT[tutI];
-  drawWolf('tutWolf', s.i);
+  drawWolfScene('tutWolf', s.i);
   document.getElementById('tutStep').textContent=(tutI+1)+' / '+TUT.length;
   document.getElementById('tutTitle').textContent=s.t;
   document.getElementById('tutBody').textContent=s.b;
@@ -541,13 +543,13 @@ function startOnboarding(){
   document.getElementById('appMain').hidden=true;
   document.getElementById('screen-onboarding').hidden=false;
   obPage=0; obSelected=[]; const hl=document.getElementById('obHabitList'); if(hl) delete hl.dataset.built;
-  renderOnboarding(); drawWolf('wolfOnboard', 4);
+  renderOnboarding(); drawWolfScene('wolfOnboard', 4);
 }
 function renderOnboarding(){
   document.querySelectorAll('.ob-page').forEach(p=>p.hidden=(+p.dataset.page!==obPage));
   document.querySelectorAll('.ob-dot').forEach(d=>d.classList.toggle('active',+d.dataset.d===obPage));
   const next=document.getElementById('obNext'); next.textContent=obPage===2?'BEGIN':'CONTINUE';
-  if(obPage===1){ drawWolf('wolfName', 0); next.disabled=document.getElementById('petNameInput').value.trim().length===0; }
+  if(obPage===1){ drawWolfScene('wolfName', 0); next.disabled=document.getElementById('petNameInput').value.trim().length===0; }
   else next.disabled=false;
   if(obPage===2 && !document.getElementById('obHabitList').dataset.built) buildHabitChooser();
 }
