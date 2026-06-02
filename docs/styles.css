@@ -412,9 +412,18 @@ canvas{display:block;}
   background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 34' preserveAspectRatio='none'><path d='M0 34 L0 17 L6 9 L12 16 L19 6 L26 15 L34 8 L42 16 L50 7 L58 16 L66 8 L74 15 L81 7 L88 15 L94 10 L100 16 L100 34 Z' fill='%23070B14'/></svg>") bottom/100% 100% no-repeat;}
 .scene-ridge.back{height:46%;opacity:.55;
   background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 30' preserveAspectRatio='none'><path d='M0 30 L0 15 L10 10 L18 15 L28 8 L38 14 L48 9 L58 15 L68 9 L78 14 L88 10 L100 15 L100 30 Z' fill='%23141C32'/></svg>") bottom/100% 100% no-repeat;}
+:root{--wolf-rim:drop-shadow(0 -2px 2px rgba(248,224,170,.42)) drop-shadow(2px 0 2px rgba(120,150,210,.12)) drop-shadow(0 16px 20px rgba(0,0,0,.55));}
 .wolf-cut{position:relative;z-index:2;width:auto;object-fit:contain;display:block;cursor:pointer;
-  filter:drop-shadow(0 -2px 2px rgba(248,224,170,.42)) drop-shadow(2px 0 2px rgba(120,150,210,.12)) drop-shadow(0 16px 20px rgba(0,0,0,.55));
+  filter:var(--wolf-rim);transition:filter .6s ease;
   animation:wolfIdle 4.6s ease-in-out infinite;transform-origin:50% 100%;}
+/* the wolf brightens when you keep your streak and dims (recoverable) when neglected */
+.scene[data-mood="thriving"] .wolf-cut{filter:var(--wolf-rim) saturate(1.08) brightness(1.06);}
+.scene[data-mood="good"] .wolf-cut{filter:var(--wolf-rim) saturate(1.02) brightness(1.01);}
+.scene[data-mood="neutral"] .wolf-cut{filter:var(--wolf-rim) saturate(.9) brightness(.97);}
+.scene[data-mood="disappointed"] .wolf-cut{filter:var(--wolf-rim) saturate(.72) brightness(.9);}
+.scene[data-mood="struggling"] .wolf-cut{filter:var(--wolf-rim) saturate(.55) brightness(.83);}
+.scene[data-mood="thriving"]::before{opacity:1.1;}
+.scene[data-mood="struggling"]::before,.scene[data-mood="disappointed"]::before{opacity:.4;}
 @keyframes wolfIdle{0%,100%{transform:translateY(0) scaleY(1) rotate(0);}50%{transform:translateY(-4px) scaleY(1.014) scaleX(.995) rotate(.3deg);}}
 .wolf-cut.pet{animation:wolfPet .6s var(--spring);}
 @keyframes wolfPet{0%{transform:scale(.9);}55%{transform:scale(1.09) translateY(-8px);}100%{transform:scale(1);}}

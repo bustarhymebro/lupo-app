@@ -345,6 +345,7 @@ function renderHome(){
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   drawWolfScene('wolfHome', tierIdx(lvl));
+  { const sc=document.querySelector('#wolfHome .scene'); if(sc) sc.dataset.mood=p.mood; }
   const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer';
     hw.setAttribute('role','button'); hw.setAttribute('tabindex','0');
     hw.addEventListener('click', petWolf);
@@ -452,6 +453,7 @@ function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
   drawWolfScene('wolfJourney', tierIdx(lvl));
+  { const sc=document.querySelector('#wolfJourney .scene'); if(sc) sc.dataset.mood=state.pet.mood; }
   document.getElementById('journeyLevel').textContent='LV '+lvl;
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
