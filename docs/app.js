@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-//  LUPO — endless-growth habit app (web PWA)
+//  LUPO. Endless-growth habit app (web PWA)
 // ═══════════════════════════════════════════════════════
 'use strict';
 
@@ -15,7 +15,7 @@ function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k
 // 5 maturity bands drive mood flavor (reuse of the original tone)
 const BAND_TAG = [
   'Fragile. Watching. Waiting for you to prove yourself.',
-  "Eyes open. The pack awaits — if you're worthy.",
+  "Eyes open. The pack awaits, if you're worthy.",
   'Testing his strength. Testing yours.',
   "Power building. Discipline sharpening. Don't stop now.",
   'He runs with no pack but the one he chose. You built this.',
@@ -24,7 +24,7 @@ const STAGE_MOOD_MSG = {
   0:{thriving:"You're keeping up. Don't let it slip.",good:"Decent start. He's watching you.",neutral:"Barely enough. He expects more.",disappointed:"You're already falling short.",struggling:"You're failing a pup who can't fight back yet."},
   1:{thriving:"He's starting to trust your discipline.",good:"Not bad. Keep the streak alive.",neutral:"He can feel your inconsistency.",disappointed:"He's losing faith in you.",struggling:"He whimpers when you don't show up."},
   2:{thriving:"He stands taller every time you follow through.",good:"Solid. He respects your consistency.",neutral:"You're coasting. He notices.",disappointed:"Weak days make a weak wolf.",struggling:"He's regressing because you are."},
-  3:{thriving:"Raw power. Earned by real work.",good:"He runs harder when you push harder.",neutral:"This close to greatness — and you're phoning it in.",disappointed:"Don't waste what you built.",struggling:"A wolf this far along doesn't have to fall. You chose this."},
+  3:{thriving:"Raw power. Earned by real work.",good:"He runs harder when you push harder.",neutral:"This close to greatness, and you're phoning it in.",disappointed:"Don't waste what you built.",struggling:"A wolf this far along doesn't have to fall. You chose this."},
   4:{thriving:"This is what discipline looks like. Own it.",good:"He howls on your schedule. Keep it.",neutral:"A wolf this powerful deserves better habits than this.",disappointed:"You've come too far to go soft.",struggling:"He remembers every day you didn't show up."},
 };
 // maturity spans the full 0..1 morph across all named forms, so every tier looks distinct
@@ -291,7 +291,7 @@ function renderTimerBanner(elId){
   const k=state.timer.key, h=HABITS[k], C=(2*Math.PI*26).toFixed(2);
   el.innerHTML=`<div class="timer-card">
     <svg class="timer-ring" viewBox="0 0 60 60"><circle class="ring-bg" cx="30" cy="30" r="26"/><circle class="ring-fg" cx="30" cy="30" r="26" data-timer-ring stroke-dasharray="${C}" stroke-dashoffset="${((1-timerFrac())*C).toFixed(2)}"/></svg>
-    <div class="timer-info"><div class="timer-name">${h.icon} ${h.name}</div><div class="timer-clock"><span data-timer-clock>${fmtClock(timerLeftMs())}</span> left</div><div class="timer-sub">Keep your phone down — your wolf is watching.</div></div>
+    <div class="timer-info"><div class="timer-name">${h.icon} ${h.name}</div><div class="timer-clock"><span data-timer-clock>${fmtClock(timerLeftMs())}</span> left</div><div class="timer-sub">Keep your phone down. Your wolf is watching.</div></div>
     <button class="timer-stop" type="button">STOP</button>
   </div>`;
   el.querySelector('.timer-stop').addEventListener('click',()=>{ if(confirm('Give up this session? You get no credit.')){ cancelTimer(); haptic(10); renderTimerBanner(elId); if(!screens.habits.hidden) renderHabits(); } });
@@ -362,7 +362,7 @@ function renderStats(){
   const wl=document.getElementById('weekList'); wl.innerHTML=''; const eh=enabledHabits();
   for(let off=6;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const e=state.logs[dateKey(d)];
     const lbl=d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase(); const row=document.createElement('div'); row.className='week-row';
-    if(!e){ row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-none">— no data</div>`; }
+    if(!e){ row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-none">no data</div>`; }
     else{ const dots=eh.map(k=>`<div class="week-dot" style="background:${e[k]?'var(--success)':'var(--gray3)'}"></div>`).join('');
       row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-dots">${dots}</div><div class="week-end">${logAllRequiredDone(e)?'✅':'❌'}</div>`; }
     wl.appendChild(row); }
@@ -434,7 +434,7 @@ function maybeDayComplete(){
   return false;
 }
 function showDayComplete(){
-  document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew today. Come back tomorrow — don't break the chain.";
+  document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew today. Come back tomorrow. Don't break the chain.";
   document.getElementById('dayComplete').hidden=false;
   haptic([14,50,24,50,30]);
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
@@ -443,9 +443,9 @@ document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ documen
 
 // ── First-run tutorial ──
 const TUT=[
-  {m:0.0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows — pup to legend. Slip, and he regresses. He answers to you.'},
-  {m:0.18,t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer — sleep, time off your phone, workouts. Finish them to feed him.'},
-  {m:0.62,t:'Watch him evolve.',      b:'Journey shows every form ahead. Tiny gains daily across hundreds of levels — the streak is the whole game.'},
+  {m:0.0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows from pup to legend. Slip, and he regresses. He answers to you.'},
+  {m:0.18,t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer for sleep, time off your phone, or workouts. Finish them to feed him.'},
+  {m:0.62,t:'Watch him evolve.',      b:'Journey shows every form ahead. Tiny gains daily across hundreds of levels. The streak is the whole game.'},
   {m:1.0, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
 ];
 let tutI=0;

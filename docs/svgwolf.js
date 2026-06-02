@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════
-//  LUPO WOLF — shaded illustrated mascot (front-facing, sitting)
+//  LUPO WOLF. Shaded illustrated mascot (front-facing, sitting)
 //  Morphs by maturity 0..1: pup (huge head/big eyes/stubby ears/round)
 //  -> adult (lean, tall ears, mane, amber eyes). Soft gradient shading,
-//  ambient occlusion, glossy eyes — a designed look, not flat slop.
+//  ambient occlusion, glossy eyes. A designed look, not flat slop.
 // ═══════════════════════════════════════════════════════
 (function (global) {
   'use strict';
