@@ -326,6 +326,8 @@ function switchScreen(name){
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchScreen(t.dataset.screen)));
 
+// real-world time of day shifts the sky tint (stays in the navy family)
+function todBucket(){ const h=new Date().getHours(); if(h<5)return'night'; if(h<8)return'dawn'; if(h<17)return'day'; if(h<20)return'dusk'; return'night'; }
 // progress-to-next-tier helper
 function tierProgress(){
   const lvl = levelOf(), idx = tierIdx(lvl), cur = TIERS[idx], next = TIERS[idx+1];
@@ -345,7 +347,7 @@ function renderHome(){
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   drawWolfScene('wolfHome', tierIdx(lvl));
-  { const sc=document.querySelector('#wolfHome .scene'); if(sc) sc.dataset.mood=p.mood; }
+  { const sc=document.querySelector('#wolfHome .scene'); if(sc){ sc.dataset.mood=p.mood; sc.dataset.tod=todBucket(); } }
   const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer';
     hw.setAttribute('role','button'); hw.setAttribute('tabindex','0');
     hw.addEventListener('click', petWolf);
@@ -453,7 +455,7 @@ function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
   drawWolfScene('wolfJourney', tierIdx(lvl));
-  { const sc=document.querySelector('#wolfJourney .scene'); if(sc) sc.dataset.mood=state.pet.mood; }
+  { const sc=document.querySelector('#wolfJourney .scene'); if(sc){ sc.dataset.mood=state.pet.mood; sc.dataset.tod=todBucket(); } }
   document.getElementById('journeyLevel').textContent='LV '+lvl;
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
