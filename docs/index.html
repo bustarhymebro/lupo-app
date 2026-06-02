@@ -34,7 +34,7 @@
     <!-- Page 0: Welcome -->
     <div class="ob-page" data-page="0">
       <div class="ob-wolf-wrap">
-        <div class="wolf-portrait"><img class="wolf-img" id="wolfOnboard" src="assets/wolf/stage-4.png" alt="Lupo"></div>
+        <div class="wolf-portrait"><div class="wolf-svg" id="wolfOnboard"></div></div>
       </div>
       <h1 class="ob-title">Meet Lupo.</h1>
       <p class="ob-sub">A wolf you raise by earning it in real life. Stay consistent and he grows. Slip and he regresses. He expects more from you.</p>
@@ -44,7 +44,7 @@
     <!-- Page 1: Name -->
     <div class="ob-page" data-page="1" hidden>
       <div class="ob-wolf-wrap small">
-        <div class="wolf-portrait sm"><img class="wolf-img" id="wolfName" src="assets/wolf/stage-2.png" alt="Lupo"></div>
+        <div class="wolf-portrait sm"><div class="wolf-svg" id="wolfName"></div></div>
       </div>
       <h1 class="ob-title">Name your pup.</h1>
       <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
@@ -80,7 +80,7 @@
 
       <div class="wolf-card">
         <div class="wolf-breathe">
-          <div class="wolf-portrait"><img class="wolf-img" id="wolfHome" src="assets/wolf/stage-0.png" alt="Lupo"></div>
+          <div class="wolf-portrait"><div class="wolf-svg" id="wolfHome"></div></div>
         </div>
         <div class="stage-line" id="stageLine">STAGE 0 · NEWBORN PUP</div>
         <div class="stage-tag" id="stageTag">—</div>
@@ -142,16 +142,64 @@
 
       <div class="stat-grid" id="statGrid"></div>
 
-      <div class="section-label">GROWTH JOURNEY</div>
-      <div class="growth-row" id="growthRow"></div>
-
       <div class="section-label">RECENT 14 DAYS</div>
       <div class="heatmap" id="heatmap"></div>
 
       <div class="section-label">THIS WEEK</div>
       <div class="week-list" id="weekList"></div>
+      <div class="spacer-bottom"></div>
+    </section>
 
+    <!-- JOURNEY -->
+    <section class="screen scroll" id="screen-journey" hidden>
+      <header class="page-head"><h2 class="page-title">JOURNEY</h2><div class="page-sub" id="journeySub">—</div></header>
+      <div class="journey-hero">
+        <div class="wolf-svg" id="wolfJourney"></div>
+        <div class="journey-level" id="journeyLevel">LV 0</div>
+        <div class="journey-tier" id="journeyTier">—</div>
+        <div class="meter" style="width:100%;margin:14px 0 0;">
+          <div class="meter-head"><span class="meter-label" id="journeyNextLabel">NEXT FORM</span><span class="meter-val gold" id="journeyNextVal">—</span></div>
+          <div class="meter-track"><div class="meter-fill gold" id="journeyFill"></div></div>
+        </div>
+      </div>
+      <div class="section-label">EVERY FORM</div>
+      <div class="tier-list" id="tierList"></div>
+      <div class="spacer-bottom"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="screen scroll" id="screen-profile" hidden>
+      <header class="page-head"><h2 class="page-title">PROFILE</h2></header>
+
+      <div class="section-label">YOUR WOLF</div>
+      <div class="info-card">
+        <div class="field-row">
+          <input class="field-input" id="renameInput" maxlength="18" placeholder="Lupo" autocomplete="off">
+          <button class="mini-btn" id="renameBtn" type="button">SAVE</button>
+        </div>
+      </div>
+
+      <div class="section-label">HABITS</div>
+      <div class="manage-list" id="manageList"></div>
+
+      <div class="section-label">SCREEN TIME</div>
+      <div class="info-card">
+        <div class="ic-title">Auto-verification</div>
+        <div class="ic-sub">Lupo can read your real iPhone Screen Time and verify it automatically — but only in the native iOS app (Apple Family Controls). On the web you log it yourself for now. The native build is on the way.</div>
+        <button class="mini-btn ghost" id="screenTimeBtn" type="button" disabled>NATIVE APP REQUIRED</button>
+      </div>
+
+      <div class="section-label">REMINDERS</div>
+      <div class="info-card">
+        <div class="toggle-row">
+          <div><div class="ic-title">Daily reminder</div><div class="ic-sub">A nudge if your wolf hasn't been fed today.</div></div>
+          <button class="switch" id="reminderToggle" type="button" aria-pressed="false"></button>
+        </div>
+      </div>
+
+      <div class="section-label">DANGER ZONE</div>
       <button class="btn-ghost" id="resetBtn" type="button">RESET ALL PROGRESS</button>
+      <div class="about-line" id="aboutLine">Lupo · raise a wolf · v0.3</div>
       <div class="spacer-bottom"></div>
     </section>
 
@@ -165,9 +213,17 @@
         <svg viewBox="0 0 24 24" class="tab-ico stroke"><circle cx="12" cy="12" r="9"/><path d="M8 12L11 15L16 9" fill="none"/></svg>
         <span>HABITS</span>
       </button>
+      <button class="tab" data-screen="journey" type="button">
+        <svg viewBox="0 0 24 24" class="tab-ico stroke"><path d="M5 21V8M5 8l4-4 6 4 4-3"/><circle cx="5" cy="5.5" r="1.6" fill="currentColor" stroke="none"/></svg>
+        <span>JOURNEY</span>
+      </button>
       <button class="tab" data-screen="stats" type="button">
         <svg viewBox="0 0 24 24" class="tab-ico"><rect x="3" y="13" width="5" height="8" rx="1"/><rect x="9.5" y="8" width="5" height="13" rx="1"/><rect x="16" y="4" width="5" height="17" rx="1"/></svg>
         <span>STATS</span>
+      </button>
+      <button class="tab" data-screen="profile" type="button">
+        <svg viewBox="0 0 24 24" class="tab-ico stroke"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="none"/></svg>
+        <span>PROFILE</span>
       </button>
     </nav>
   </main>
@@ -176,7 +232,7 @@
   <div class="stageup" id="stageUp" hidden>
     <div class="stageup-inner">
       <div class="stageup-kicker">STAGE UP</div>
-      <div class="wolf-portrait"><img class="wolf-img" id="wolfStageUp" src="assets/wolf/stage-4.png" alt="Lupo"></div>
+      <div class="wolf-portrait"><div class="wolf-svg" id="wolfStageUp"></div></div>
       <div class="stageup-name" id="stageUpName">—</div>
       <div class="stageup-tag" id="stageUpTag">—</div>
       <button class="btn-primary narrow" id="stageUpBtn" type="button">CONTINUE</button>
@@ -185,6 +241,7 @@
 
 </div>
 
+<script src="svgwolf.js"></script>
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
