@@ -649,6 +649,7 @@ function showStageUp(){
   drawWolfScene('wolfStageUp', tierIdx(lvl));
   openModal('stageUp');
   haptic([18,60,30,60,40]); if(window.Sound) Sound.level(); celebrateWolf('wolfStageUp');
+  if(!reduceMotion()){ const su=document.getElementById('stageUp'); if(su){ const bl=document.createElement('div'); bl.className='su-bloom'; su.appendChild(bl); setTimeout(()=>bl.remove(),950); } }
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);
 }
 document.getElementById('stageUpBtn').addEventListener('click',()=>{ closeModal('stageUp'); haptic(10); });

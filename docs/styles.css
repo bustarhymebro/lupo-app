@@ -225,7 +225,10 @@ canvas{display:block;}
 .stageup{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(ellipse at center,rgba(36,31,17,0.97),#0B0E15 80%);animation:fadeBg .4s ease;}
 @keyframes fadeBg{from{opacity:0;}to{opacity:1;}}
-.stageup-inner{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;position:relative;}
+.stageup-inner{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;position:relative;z-index:1;}
+.su-bloom{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle,rgba(255,246,222,.95),rgba(245,200,90,.45) 38%,transparent 70%);animation:bloom .9s ease-out forwards;}
+@keyframes bloom{0%{transform:translate(-50%,-50%) scale(.2);opacity:1;}100%{transform:translate(-50%,-50%) scale(16);opacity:0;}}
 .stageup-kicker{font-family:var(--display);font-size:40px;font-weight:800;letter-spacing:4px;color:var(--gold);
   text-shadow:0 0 30px rgba(245,166,35,0.6);animation:rise .5s var(--ease);}
 .stageup-name{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:3px;animation:rise .5s var(--ease) .1s both;}
