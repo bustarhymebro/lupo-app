@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lupo">
+<meta name="description" content="Raise a wolf by earning it in real life. A discipline tracker, not just an app.">
+<title>Lupo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ════════ ONBOARDING ════════ -->
+  <section class="screen onboarding" id="screen-onboarding" hidden>
+    <div class="ob-progress">
+      <span class="ob-dot" data-d="0"></span>
+      <span class="ob-dot" data-d="1"></span>
+      <span class="ob-dot" data-d="2"></span>
+    </div>
+    <button class="ob-skip" id="obSkip" type="button">Skip</button>
+
+    <!-- Page 0: Welcome -->
+    <div class="ob-page" data-page="0">
+      <div class="ob-wolf-wrap">
+        <canvas class="wolf-canvas" id="wolfOnboard" width="320" height="280"></canvas>
+      </div>
+      <h1 class="ob-title">Meet Lupo.</h1>
+      <p class="ob-sub">A wolf you raise by earning it in real life. Stay consistent and he grows. Slip and he regresses. He expects more from you.</p>
+      <div class="ob-tag">NOT AN APP. A STANDARD.</div>
+    </div>
+
+    <!-- Page 1: Name -->
+    <div class="ob-page" data-page="1" hidden>
+      <div class="ob-wolf-wrap small">
+        <canvas class="wolf-canvas" id="wolfName" width="240" height="200"></canvas>
+      </div>
+      <h1 class="ob-title">Name your pup.</h1>
+      <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
+      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false">
+    </div>
+
+    <!-- Page 2: Choose habits -->
+    <div class="ob-page" data-page="2" hidden>
+      <h1 class="ob-title small">Choose your habits.</h1>
+      <p class="ob-sub">Screen time is always tracked. Pick the others you'll be held to. Every one you keep feeds the wolf.</p>
+      <div class="ob-habit-list" id="obHabitList"></div>
+    </div>
+
+    <div class="ob-footer">
+      <button class="btn-primary" id="obNext" type="button">CONTINUE</button>
+    </div>
+  </section>
+
+  <!-- ════════ MAIN APP ════════ -->
+  <main class="app-main" id="appMain" hidden>
+
+    <!-- HOME -->
+    <section class="screen scroll" id="screen-home">
+      <header class="home-top">
+        <div>
+          <div class="home-name" id="homeName">LUPO</div>
+          <div class="home-date" id="homeDate">—</div>
+        </div>
+        <div class="streak-badge" id="streakBadge"><span class="flame">🔥</span><span id="streakCount">0</span></div>
+      </header>
+
+      <p class="mood-msg" id="moodMsg">—</p>
+
+      <div class="wolf-card">
+        <div class="wolf-breathe">
+          <canvas class="wolf-canvas" id="wolfHome" width="340" height="250"></canvas>
+        </div>
+        <div class="stage-line" id="stageLine">STAGE 0 · NEWBORN PUP</div>
+        <div class="stage-tag" id="stageTag">—</div>
+      </div>
+
+      <!-- Energy -->
+      <div class="meter">
+        <div class="meter-head">
+          <span class="meter-label">ENERGY</span>
+          <span class="meter-val" id="energyVal">50%</span>
+        </div>
+        <div class="meter-track"><div class="meter-fill energy" id="energyFill"></div></div>
+      </div>
+
+      <!-- Progress to next stage -->
+      <div class="meter" id="progressBlock">
+        <div class="meter-head">
+          <span class="meter-label" id="progressLabel">PROGRESS TO YOUNG PUP</span>
+          <span class="meter-val gold" id="progressDays">7 DAYS LEFT</span>
+        </div>
+        <div class="meter-track"><div class="meter-fill gold" id="progressFill"></div></div>
+      </div>
+
+      <!-- Quick habit row -->
+      <div class="quick-row" id="quickRow"></div>
+
+      <!-- CTA -->
+      <div id="homeCta"></div>
+
+      <div class="spacer-bottom"></div>
+    </section>
+
+    <!-- HABITS -->
+    <section class="screen scroll" id="screen-habits" hidden>
+      <header class="page-head">
+        <h2 class="page-title">TODAY</h2>
+        <div class="page-sub" id="habitsDate">—</div>
+      </header>
+
+      <div class="banner" id="successBanner" hidden><span>🐺</span> Lupo fed for today</div>
+
+      <div class="habit-list" id="habitList"></div>
+
+      <div class="completion-card">
+        <div class="meter-head">
+          <span class="meter-label">TODAY'S COMPLETION</span>
+          <span class="meter-val gold" id="completionPct">0%</span>
+        </div>
+        <div class="meter-track"><div class="meter-fill gold" id="completionFill"></div></div>
+      </div>
+
+      <button class="btn-primary" id="saveBtn" type="button">SAVE PROGRESS</button>
+      <div class="spacer-bottom"></div>
+    </section>
+
+    <!-- STATS -->
+    <section class="screen scroll" id="screen-stats" hidden>
+      <header class="page-head"><h2 class="page-title">STATS</h2></header>
+
+      <div class="stat-grid" id="statGrid"></div>
+
+      <div class="section-label">GROWTH JOURNEY</div>
+      <div class="growth-row" id="growthRow"></div>
+
+      <div class="section-label">RECENT 14 DAYS</div>
+      <div class="heatmap" id="heatmap"></div>
+
+      <div class="section-label">THIS WEEK</div>
+      <div class="week-list" id="weekList"></div>
+
+      <button class="btn-ghost" id="resetBtn" type="button">RESET ALL PROGRESS</button>
+      <div class="spacer-bottom"></div>
+    </section>
+
+    <!-- TAB BAR -->
+    <nav class="tab-bar" id="tabBar">
+      <button class="tab active" data-screen="home" type="button">
+        <svg viewBox="0 0 24 24" class="tab-ico"><path d="M3 10.5L12 3L21 10.5V20C21 20.6 20.6 21 20 21H15V15H9V21H4C3.4 21 3 20.6 3 20V10.5Z"/></svg>
+        <span>HOME</span>
+      </button>
+      <button class="tab" data-screen="habits" type="button">
+        <svg viewBox="0 0 24 24" class="tab-ico stroke"><circle cx="12" cy="12" r="9"/><path d="M8 12L11 15L16 9" fill="none"/></svg>
+        <span>HABITS</span>
+      </button>
+      <button class="tab" data-screen="stats" type="button">
+        <svg viewBox="0 0 24 24" class="tab-ico"><rect x="3" y="13" width="5" height="8" rx="1"/><rect x="9.5" y="8" width="5" height="13" rx="1"/><rect x="16" y="4" width="5" height="17" rx="1"/></svg>
+        <span>STATS</span>
+      </button>
+    </nav>
+  </main>
+
+  <!-- STAGE-UP OVERLAY -->
+  <div class="stageup" id="stageUp" hidden>
+    <div class="stageup-inner">
+      <div class="stageup-kicker">STAGE UP</div>
+      <canvas class="wolf-canvas" id="wolfStageUp" width="260" height="220"></canvas>
+      <div class="stageup-name" id="stageUpName">—</div>
+      <div class="stageup-tag" id="stageUpTag">—</div>
+      <button class="btn-primary narrow" id="stageUpBtn" type="button">CONTINUE</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="wolf.js"></script>
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+</script>
+</body>
+</html>

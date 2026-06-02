@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="70%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#0A0A0A"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFD000"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <!-- wolf head silhouette, front-facing, minimal -->
+  <g fill="url(#gold)">
+    <path d="M256 132
+             L188 86 L206 168
+             C170 196 150 240 150 290
+             C150 366 196 420 256 420
+             C316 420 362 366 362 290
+             C362 240 342 196 306 168
+             L324 86 Z"/>
+  </g>
+  <!-- eyes -->
+  <ellipse cx="222" cy="268" rx="15" ry="22" fill="#0A0A0A"/>
+  <ellipse cx="290" cy="268" rx="15" ry="22" fill="#0A0A0A"/>
+  <!-- snout -->
+  <path d="M256 318 L238 348 C246 360 266 360 274 348 Z" fill="#0A0A0A"/>
+</svg>
