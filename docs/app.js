@@ -4,13 +4,18 @@
 'use strict';
 
 // ── Growth model ──
+// Five painted forms (art Jake provided), with his names and the level each unlocks
 const TIERS = [
-  {at:0,name:'Newborn Pup'},{at:3,name:'Pup'},{at:7,name:'Whelp'},{at:12,name:'Yearling'},
-  {at:18,name:'Scout'},{at:25,name:'Tracker'},{at:33,name:'Prowler'},{at:42,name:'Hunter'},
-  {at:55,name:'Lone Wolf'},{at:70,name:'Pack Wolf'},{at:88,name:'Warrior'},{at:108,name:'Sentinel'},
-  {at:130,name:'Elder'},{at:155,name:'Alpha'},{at:185,name:'Spirit Wolf'},{at:220,name:'Legend'},
+  {at:0,  name:'Pup'},
+  {at:6,  name:'Junior'},
+  {at:18, name:'Adolescent'},
+  {at:40, name:'Young Adult'},
+  {at:75, name:'Full Grown'},
 ];
 function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k].at) i=k; } return i; }
+const PAINTED=['assets/wolf/painted-0.jpg','assets/wolf/painted-1.jpg','assets/wolf/painted-2.jpg','assets/wolf/painted-3.jpg','assets/wolf/painted-4.jpg'];
+function wolfImg(i){ i=Math.max(0,Math.min(4, i|0)); return (state && state.wolfArt && state.wolfArt[i]) || PAINTED[i]; }
+function drawWolf(idOrEl, i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el) return; const src=wolfImg(i); const key='w:'+src; if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+src+'" alt="Lupo">'; } }
 
 // 5 maturity bands drive mood flavor (reuse of the original tone)
 const BAND_TAG = [
@@ -27,10 +32,7 @@ const STAGE_MOOD_MSG = {
   3:{thriving:"Raw power. Earned by real work.",good:"He runs harder when you push harder.",neutral:"This close to greatness, and you're phoning it in.",disappointed:"Don't waste what you built.",struggling:"A wolf this far along doesn't have to fall. You chose this."},
   4:{thriving:"This is what discipline looks like. Own it.",good:"He howls on your schedule. Keep it.",neutral:"A wolf this powerful deserves better habits than this.",disappointed:"You've come too far to go soft.",struggling:"He remembers every day you didn't show up."},
 };
-// maturity spans the full 0..1 morph across all named forms, so every tier looks distinct
-function maturityAtLevel(lvl){ const i=tierIdx(lvl), nx=TIERS[i+1]; if(!nx) return 1; const f=(lvl-TIERS[i].at)/(nx.at-TIERS[i].at); return Math.min(1,(i+f)/(TIERS.length-1)); }
-function maturityAtTier(i){ return i/(TIERS.length-1); }
-const band = (lvl) => Math.min(Math.floor(maturityAtLevel(lvl) * 5), 4);
+const band = (lvl) => tierIdx(lvl);
 
 // ── Habits ──
 // kind: 'limit' (stay under, manual confirm) | 'timer' (run a countdown) | 'check' (manual)
@@ -74,18 +76,27 @@ function defaultState(){
   };
 }
 function load(){
-  try{ const raw = localStorage.getItem(STORE_KEY); state = raw ? JSON.parse(raw) : defaultState(); }
-  catch(e){ state = defaultState(); }
-  if(!state.logs) state.logs = {};
-  if(!state.habits) state.habits = defaultState().habits;
-  HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k] = {enabled:false}; if(state.habits[k].target==null) state.habits[k].target = HABITS[k].def; });
-  if(state.timer === undefined) state.timer = null;
-  if(state.tutorialSeen === undefined) state.tutorialSeen = false;
-  if(state.lastCelebratedDay === undefined) state.lastCelebratedDay = null;
-  if(state.sound === undefined) state.sound = true;
-  if(!state.wolfArt) state.wolfArt = {};
+  const def = defaultState();
+  let parsed = null;
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) parsed = JSON.parse(raw); }
+  catch(e){ try{ const raw=localStorage.getItem(STORE_KEY); if(raw) localStorage.setItem(STORE_KEY+'.corrupt.'+Date.now(), raw); }catch(_){} parsed = null; }
+  state = Object.assign({}, def, parsed || {});
+  state.pet = Object.assign({}, def.pet, (parsed && parsed.pet) || {});
+  state.habits = (parsed && typeof parsed.habits==='object' && parsed.habits) || def.habits;
+  if(!state.logs || typeof state.logs!=='object') state.logs = {};
+  if(!state.wolfArt || typeof state.wolfArt!=='object') state.wolfArt = {};
+  HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
+  if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
+  ['energy','consistentDays','totalDaysTracked','missedDaysStreak','stage','tierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
+  state.pet.energy = Math.max(0, Math.min(1, state.pet.energy));
+  if(typeof state.pet.name!=='string' || !state.pet.name) state.pet.name='Lupo';
+  if(typeof state.pet.lastUpdated!=='string') state.pet.lastUpdated=new Date().toISOString();
+  if(state.timer && (typeof state.timer.dur!=='number' || typeof state.timer.start!=='number' || !HABITS[state.timer.key])) state.timer=null;
+  if(typeof state.sound!=='boolean') state.sound=true;
+  if(typeof state.tutorialSeen!=='boolean') state.tutorialSeen=false;
+  if(typeof state.reminders!=='boolean') state.reminders=false;
 }
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); return true; }catch(e){ return false; } }
 
 // ── Dates ──
 function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -97,20 +108,19 @@ function todayKey(){ return dateKey(new Date()); }
 function enabledHabits(){ return HABIT_ORDER.filter(k => state.habits[k].enabled); }
 function ensureLog(key){
   if(!state.logs[key]){ const e={}; enabledHabits().forEach(h=>e[h]=false); state.logs[key]=e; }
-  enabledHabits().forEach(h=>{ if(!(h in state.logs[key])) state.logs[key][h]=false; });
+  if(key===todayKey()){ enabledHabits().forEach(h=>{ if(!(h in state.logs[key])) state.logs[key][h]=false; }); }
   return state.logs[key];
 }
+// score each day against the habits actually recorded in THAT day's entry (not today's live set)
+function logKeys(entry){ return Object.keys(entry||{}).filter(k=>HABITS[k]); }
 function logAllRequiredDone(entry){
   if(!entry) return false;
-  const req = enabledHabits().filter(k=>HABITS[k].required);
-  if(req.length===0) return false;
-  return req.every(k=>entry[k]===true);
+  const keys=logKeys(entry); const req=keys.filter(k=>HABITS[k].required);
+  if(req.length) return req.every(k=>entry[k]===true);
+  return keys.length>0 && keys.every(k=>entry[k]===true);
 }
-function logCompletionRate(entry){
-  const keys = enabledHabits(); if(keys.length===0) return 0;
-  return keys.filter(k=>entry[k]===true).length / keys.length;
-}
-function logAllEnabledDone(entry){ const keys=enabledHabits(); return keys.length>0 && keys.every(k=>entry[k]===true); }
+function logCompletionRate(entry){ const keys=logKeys(entry); if(!keys.length) return 0; return keys.filter(k=>entry[k]===true).length/keys.length; }
+function logAllEnabledDone(entry){ const keys=logKeys(entry); return keys.length>0 && keys.every(k=>entry[k]===true); }
 
 // ── Game logic ──
 function moodForEnergy(e){ if(e>=0.75)return'thriving'; if(e>=0.5)return'good'; if(e>=0.35)return'neutral'; if(e>=0.2)return'disappointed'; return'struggling'; }
@@ -151,9 +161,9 @@ function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mo
 // ── Timer (Forest-style countdown; persists via timestamps) ──
 function startTimer(k){ state.timer={key:k,start:Date.now(),dur:targetMs(k)}; save(); }
 function cancelTimer(){ state.timer=null; save(); }
-function timerLeftMs(){ if(!state.timer) return 0; return Math.max(0, state.timer.dur-(Date.now()-state.timer.start)); }
-function timerFrac(){ if(!state.timer) return 0; return Math.min(1,(Date.now()-state.timer.start)/state.timer.dur); }
-function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; ensureLog(todayKey())[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
+function timerLeftMs(){ if(!state.timer || !Number.isFinite(state.timer.dur) || !Number.isFinite(state.timer.start)) return 0; return Math.max(0, state.timer.dur-(Date.now()-state.timer.start)); }
+function timerFrac(){ if(!state.timer || !Number.isFinite(state.timer.dur) || state.timer.dur<=0) return 0; return Math.min(1,(Date.now()-state.timer.start)/state.timer.dur); }
+function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; const day=dateKey(new Date(state.timer.start)); ensureLog(day)[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
 function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
   return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(sec).padStart(2,'0'); }
 let tickStarted=false;
@@ -178,14 +188,6 @@ function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.cl
 function stagger(nodes, base){ base=base||0; nodes.forEach((k,i)=>{ k.classList.remove('rise'); k.style.animationDelay=(base+i*50)+'ms'; void k.offsetWidth; k.classList.add('rise'); }); }
 function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700; const s=performance.now();
   (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1)requestAnimationFrame(tick); })(performance.now()); }
-function artBand(m){ return Math.min(Math.floor(m*5),4); }
-function setWolf(id,m){
-  const el=document.getElementById(id); if(!el) return;
-  const b=artBand(m), art=state.wolfArt && state.wolfArt[b];
-  if(art){ const key='art'+b; if(el.dataset.art!==key){ el.dataset.art=key; el.dataset.m=''; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+art+'" alt="Lupo">'; } return; }
-  if(el.dataset.art){ el.dataset.art=''; el.dataset.m=''; }
-  LupoWolf.renderWolf(id,m);
-}
 function handleWolfUpload(file, band){
   const r=new FileReader();
   r.onload=()=>{ const img=new Image();
@@ -194,8 +196,9 @@ function handleWolfUpload(file, band){
       const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
       cv.getContext('2d').drawImage(img,0,0,cw,ch);
       let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ url=r.result; }
-      if(!state.wolfArt) state.wolfArt={}; state.wolfArt[band]=url;
-      try{ save(); }catch(e){ alert('That image is too large to store. Try a smaller one.'); return; }
+      if(!state.wolfArt) state.wolfArt={};
+      const prev=state.wolfArt[band]; state.wolfArt[band]=url;
+      if(!save()){ if(prev===undefined) delete state.wolfArt[band]; else state.wolfArt[band]=prev; alert('That image is too large to store. Try a smaller one.'); return; }
       haptic(12); renderProfile();
     };
     img.src=r.result;
@@ -239,7 +242,7 @@ function renderHome(){
   document.getElementById('streakCount').textContent = lvl;
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
-  setWolf('wolfHome', maturityAtLevel(lvl));
+  drawWolf('wolfHome', tierIdx(lvl));
   const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer'; hw.addEventListener('click', petWolf); }
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
@@ -263,7 +266,7 @@ function renderHome(){
     it.innerHTML=`<div class="quick-ico ${done?'done':''}">${HABITS[k].icon}</div><div class="quick-dot ${done?'done':''}"></div>`; quick.appendChild(it); });
 
   const cta = document.getElementById('homeCta');
-  if(logAllRequiredDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ All done today. ${p.name} grew a little.</div>`; }
+  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ Fed for today. ${p.name} grows by morning.</div>`; }
   else { cta.innerHTML = `<button class="btn-primary cta-log" type="button">LOG TODAY</button>`; cta.querySelector('button').addEventListener('click',()=>switchScreen('habits')); }
 }
 
@@ -329,7 +332,7 @@ function updateHabitCompletion(initial){
   document.getElementById('completionPct').textContent=Math.round(rate*100)+'%';
   const fill=document.getElementById('completionFill');
   if(initial) requestAnimationFrame(()=> fill.style.width=(rate*100)+'%'); else fill.style.width=(rate*100)+'%';
-  document.getElementById('successBanner').hidden=!logAllRequiredDone(entry);
+  document.getElementById('successBanner').hidden=!logAllEnabledDone(entry);
 }
 document.getElementById('saveBtn').addEventListener('click',()=>{ save(); const b=document.getElementById('saveBtn'); const o=b.textContent; b.textContent='SAVED ✓'; haptic(12); setTimeout(()=>b.textContent=o,1200); });
 
@@ -339,7 +342,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{ save(); const 
 function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
-  setWolf('wolfJourney', maturityAtLevel(lvl));
+  drawWolf('wolfJourney', tierIdx(lvl));
   document.getElementById('journeyLevel').textContent='LV '+lvl;
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
@@ -357,7 +360,7 @@ function renderJourney(){
       <div class="tier-info"><div class="tier-name">${t.name}</div><div class="tier-lvl">LV ${t.at}</div></div>
       <div class="tier-mark">${reached?'✓':'🔒'}</div>`;
     list.appendChild(row);
-    LupoWolf.renderWolf(row.querySelector('.tier-wolf'), maturityAtTier(i));
+    drawWolf(row.querySelector('.tier-wolf'), i);
     row.querySelector('.tier-wolf').style.opacity = reached?'1':'0.4';
   });
   stagger([...list.children]);
@@ -435,10 +438,36 @@ document.getElementById('soundToggle').addEventListener('click',()=>{ state.soun
 document.getElementById('clearArtBtn').addEventListener('click',()=>{ state.wolfArt={}; save(); haptic(10); renderProfile(); });
 document.getElementById('renameBtn').addEventListener('click',()=>{ const v=document.getElementById('renameInput').value.trim()||'Lupo'; state.pet.name=v; save(); haptic(12); const b=document.getElementById('renameBtn'); b.textContent='SAVED'; setTimeout(()=>b.textContent='SAVE',1000); });
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
-  if(!state.reminders){ if('Notification' in window){ try{ await Notification.requestPermission(); }catch(e){} } state.reminders=true; }
-  else state.reminders=false;
-  save(); haptic(10); renderProfile();
+  haptic(10);
+  if(!state.reminders){
+    if(!('Notification' in window)){ alert('This browser does not support notifications.'); return; }
+    let p = Notification.permission;
+    if(p !== 'granted') { try { p = await Notification.requestPermission(); } catch(e){ p='denied'; } }
+    if(p === 'granted'){
+      state.reminders = true;
+      try{ new Notification('Lupo', { body: (state.pet.name||'Your wolf') + ' will nudge you to keep your streak.', icon:'icon-192.png' }); }catch(e){}
+      scheduleReminder();
+    } else { alert('Allow notifications in your browser settings to turn on reminders.'); }
+  } else {
+    state.reminders = false;
+    if(reminderTimer){ clearTimeout(reminderTimer); reminderTimer=null; }
+  }
+  save(); renderProfile();
 });
+// Local evening nudge that fires if the app is open and today is not complete yet.
+let reminderTimer=null;
+function scheduleReminder(){
+  if(reminderTimer){ clearTimeout(reminderTimer); reminderTimer=null; }
+  if(!state.reminders || !('Notification' in window) || Notification.permission!=='granted') return;
+  const now=new Date(); const target=new Date(now.getFullYear(),now.getMonth(),now.getDate(),20,0,0);
+  if(target<=now) target.setDate(target.getDate()+1);
+  reminderTimer=setTimeout(()=>{
+    if(state.reminders && !logAllRequiredDone(ensureLog(todayKey()))){
+      try{ new Notification('Lupo', { body:(state.pet.name||'Your wolf')+" hasn't been fed today. Keep the streak alive.", icon:'icon-192.png' }); }catch(e){}
+    }
+    scheduleReminder();
+  }, Math.min(target-now, 2147483000));
+}
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(confirm('Reset ALL progress? Your wolf goes back to a newborn pup. This cannot be undone.')){
     localStorage.removeItem(STORE_KEY); load(); startOnboarding();
@@ -460,7 +489,7 @@ function showStageUp(){
   document.querySelector('.stageup-kicker').textContent='NEW FORM';
   document.getElementById('stageUpName').textContent=TIERS[idx].name.toUpperCase();
   document.getElementById('stageUpTag').textContent=BAND_TAG[band(lvl)];
-  setWolf('wolfStageUp', maturityAtLevel(lvl));
+  drawWolf('wolfStageUp', tierIdx(lvl));
   document.getElementById('stageUp').hidden=false;
   haptic([18,60,30,60,40]); if(window.Sound) Sound.level(); celebrateWolf('wolfStageUp');
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);
@@ -475,7 +504,7 @@ function maybeDayComplete(){
   return false;
 }
 function showDayComplete(){
-  document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew today. Come back tomorrow. Don't break the chain.";
+  document.getElementById('dayCompleteSub').textContent = state.pet.name + " is fed for today. He grows by morning. Come back tomorrow and keep the streak.";
   document.getElementById('dayComplete').hidden=false;
   haptic([14,50,24,50,30]); if(window.Sound) Sound.day();
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
@@ -484,16 +513,16 @@ document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ documen
 
 // ── First-run tutorial ──
 const TUT=[
-  {m:0.0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows from pup to legend. Slip, and he regresses. He answers to you.'},
-  {m:0.18,t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer for sleep, time off your phone, or workouts. Finish them to feed him.'},
-  {m:0.62,t:'Watch him evolve.',      b:'Journey shows every form ahead. Tiny gains daily across hundreds of levels. The streak is the whole game.'},
-  {m:1.0, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
+  {i:0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows from a pup to full grown. Slip, and he regresses. He answers to you.'},
+  {i:1, t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer for sleep, time off your phone, or workouts. Finish them to feed him.'},
+  {i:3, t:'Watch him grow up.',     b:'Journey shows all five forms ahead, from Pup to Full Grown. Tiny gains daily. The streak is the whole game.'},
+  {i:4, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
 ];
 let tutI=0;
 function showTutorial(){ tutI=0; document.getElementById('tutorial').hidden=false; renderTut(); }
 function renderTut(){
   const s=TUT[tutI];
-  LupoWolf.renderWolf('tutWolf', s.m);
+  drawWolf('tutWolf', s.i);
   document.getElementById('tutStep').textContent=(tutI+1)+' / '+TUT.length;
   document.getElementById('tutTitle').textContent=s.t;
   document.getElementById('tutBody').textContent=s.b;
@@ -512,13 +541,13 @@ function startOnboarding(){
   document.getElementById('appMain').hidden=true;
   document.getElementById('screen-onboarding').hidden=false;
   obPage=0; obSelected=[]; const hl=document.getElementById('obHabitList'); if(hl) delete hl.dataset.built;
-  renderOnboarding(); setWolf('wolfOnboard', 1);
+  renderOnboarding(); drawWolf('wolfOnboard', 4);
 }
 function renderOnboarding(){
   document.querySelectorAll('.ob-page').forEach(p=>p.hidden=(+p.dataset.page!==obPage));
   document.querySelectorAll('.ob-dot').forEach(d=>d.classList.toggle('active',+d.dataset.d===obPage));
   const next=document.getElementById('obNext'); next.textContent=obPage===2?'BEGIN':'CONTINUE';
-  if(obPage===1){ setWolf('wolfName', 0.3); next.disabled=document.getElementById('petNameInput').value.trim().length===0; }
+  if(obPage===1){ drawWolf('wolfName', 0); next.disabled=document.getElementById('petNameInput').value.trim().length===0; }
   else next.disabled=false;
   if(obPage===2 && !document.getElementById('obHabitList').dataset.built) buildHabitChooser();
 }
@@ -552,5 +581,7 @@ function enterApp(){
   if(pendingStageUp){ pendingStageUp=false; showStageUp(); }
   else if(!state.tutorialSeen){ showTutorial(); }
 }
-function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); checkTimer(); enterApp(); } }
+function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick();
+  if(!state.onboarded){ startOnboarding(); }
+  else { checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); enterApp(); } }
 window.addEventListener('load', boot);

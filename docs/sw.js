@@ -1,5 +1,5 @@
 // Lupo service worker. Offline-first cache
-const CACHE = 'lupo-v11';
+const CACHE = 'lupo-v12';
 const ASSETS = [
   './',
   './index.html',
@@ -31,8 +31,11 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     caches.match(e.request).then((cached) =>
       cached || fetch(e.request).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        try{ const u = new URL(e.request.url);
+          if(res && res.ok && res.type === 'basic' && u.origin === location.origin){
+            const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+          }
+        }catch(_){}
         return res;
       }).catch(() => cached)
     )
