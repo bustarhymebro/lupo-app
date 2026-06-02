@@ -354,6 +354,8 @@ canvas{display:block;}
 .ic-sub{font-size:12px;color:var(--gray);line-height:1.5;margin-top:4px;}
 .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .about-line{text-align:center;font-family:var(--mono);font-size:10px;color:var(--gray);margin-top:22px;letter-spacing:1px;}
+.legal-line{text-align:center;font-family:var(--mono);font-size:8px;color:var(--gray3);margin-top:6px;letter-spacing:.5px;}
+.legal-line a{color:var(--gray3);text-decoration:none;}
 .manage-list{display:flex;flex-direction:column;gap:8px;padding:0 20px;}
 .manage-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:14px;background:var(--card);border:1px solid var(--border);}
 .manage-ico{width:38px;height:38px;border-radius:11px;background:var(--card3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}

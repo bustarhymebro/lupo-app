@@ -5,12 +5,13 @@
 
 // ── Growth model ──
 // Five painted forms (art Jake provided), with his names and the level each unlocks
+// `at` = consistent days required; displayed level is days+1 so a new wolf is LV 1 and forms unlock on clean numbers (1/5/15/30/50)
 const TIERS = [
   {at:0,  name:'Pup'},
-  {at:6,  name:'Junior'},
-  {at:18, name:'Adolescent'},
-  {at:40, name:'Young Adult'},
-  {at:75, name:'Full Grown'},
+  {at:4,  name:'Yearling'},
+  {at:14, name:'Scout'},
+  {at:29, name:'Hunter'},
+  {at:49, name:'Alpha'},
 ];
 function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k].at) i=k; } return i; }
 const PAINTED=['assets/wolf/painted-cut-0.png','assets/wolf/painted-cut-1.png','assets/wolf/painted-cut-2.png','assets/wolf/painted-cut-3.png','assets/wolf/painted-cut-4.png'];
@@ -53,6 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
+const BUILD = '28'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -158,6 +160,7 @@ function logAllEnabledDone(entry){ const keys=logKeys(entry); return keys.length
 // ── Game logic ──
 function moodForEnergy(e){ if(e>=0.75)return'thriving'; if(e>=0.5)return'good'; if(e>=0.35)return'neutral'; if(e>=0.2)return'disappointed'; return'struggling'; }
 const levelOf = () => state.pet.consistentDays;
+const displayLevel = () => state.pet.consistentDays + 1; // 1-based level shown to the user
 
 function parseDayKey(k){ const p=String(k||'').split('-'); const d=new Date(+p[0],(+p[1]||1)-1,(+p[2]||1)); return isNaN(d.getTime())?startOfDay(new Date()):d; }
 function checkForNewDay(){
@@ -353,7 +356,7 @@ function renderHome(){
     hw.addEventListener('click', petWolf);
     hw.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '||e.key==='Spacebar'){ e.preventDefault(); petWolf(); } }); }
   if(hw) hw.setAttribute('aria-label','Pet '+(p.name||'your wolf'));
-  document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
+  document.getElementById('stageLine').textContent = 'LV ' + displayLevel() + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
 
   animateNumber(document.getElementById('energyVal'), Math.round(p.energy*100), 700, '%');
@@ -456,7 +459,7 @@ function renderJourney(){
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
   drawWolfScene('wolfJourney', tierIdx(lvl));
   { const sc=document.querySelector('#wolfJourney .scene'); if(sc){ sc.dataset.mood=state.pet.mood; sc.dataset.tod=todBucket(); } }
-  document.getElementById('journeyLevel').textContent='LV '+lvl;
+  document.getElementById('journeyLevel').textContent='LV '+displayLevel();
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
     document.getElementById('journeyNextVal').textContent='LEGEND';
@@ -474,7 +477,7 @@ function renderJourney(){
         ${current?'<span class="node-you">YOU</span>':''}
         <div class="node-disc"><div class="node-wolf"></div>${reached?'':'<div class="node-lock">🔒</div>'}</div>
         <div class="node-name">${t.name}</div>
-        <div class="node-lvl">${reached?'UNLOCKED':'LV '+t.at}</div>
+        <div class="node-lvl">${reached?'UNLOCKED':'LV '+(t.at+1)}</div>
       </div>`;
     list.appendChild(row);
     drawWolf(row.querySelector('.node-wolf'), i);
@@ -494,7 +497,7 @@ function renderStats(){
   const cards=[
     {ico:'📅',label:'TOTAL DAYS',to:p.totalDaysTracked,suffix:'',color:'#fff'},
     {ico:'🔥',label:'STREAK',to:lvl,suffix:'',color:'#F5A623'},
-    {ico:'⭐',label:'LEVEL',to:lvl,suffix:'',sub:tp.cur.name.toUpperCase(),color:'#F5A623'},
+    {ico:'⭐',label:'LEVEL',to:displayLevel(),suffix:'',sub:tp.cur.name.toUpperCase(),color:'#F5A623'},
     {ico:'✓',label:'COMPLETION',to:Math.round(oc*100),suffix:'%',color:oc>0.7?'#22C55E':'#F5A623'},
   ];
   grid.innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-card-head"><span class="stat-card-ico">${c.ico}</span><span class="stat-card-label">${c.label}</span></div><div class="stat-card-val" data-to="${c.to}" data-suffix="${c.suffix}" style="color:${c.color}">0${c.suffix}</div>${c.sub?`<div class="stat-card-sub">${c.sub}</div>`:''}</div>`).join('');
@@ -524,7 +527,7 @@ function renderStats(){
 // ═══════════════════════════════════════════════════════
 //  PROFILE
 // ═══════════════════════════════════════════════════════
-const ART_LABELS=['Pup','Young','Teen','Sub','Adult'];
+const ART_LABELS=['Pup','Yearling','Scout','Hunter','Alpha'];
 function renderProfile(){
   document.getElementById('renameInput').value = state.pet.name;
   const as=document.getElementById('artSlots');
@@ -553,6 +556,7 @@ function renderProfile(){
     if(!locked) row.querySelector('.switch').addEventListener('click',()=>{ state.habits[k].enabled=!state.habits[k].enabled; ensureLog(todayKey()); save(); haptic(10); renderProfile(); });
     ml.appendChild(row);
   });
+  { const bt=document.getElementById('buildTag'); if(bt) bt.textContent='build '+BUILD; }
   const rt=document.getElementById('reminderToggle'); rt.classList.toggle('on',!!state.reminders); rt.setAttribute('aria-pressed',!!state.reminders);
   const st=document.getElementById('soundToggle'); if(st){ st.classList.toggle('on',!!state.sound); st.setAttribute('aria-pressed',!!state.sound); }
 }
