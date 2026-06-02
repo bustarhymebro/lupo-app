@@ -461,16 +461,20 @@ function renderJourney(){
     document.getElementById('journeyNextVal').textContent=tp.daysLeft+'d';
     requestAnimationFrame(()=> document.getElementById('journeyFill').style.width=(tp.frac*100)+'%');
   }
-  const list=document.getElementById('tierList'); list.innerHTML='';
+  const list=document.getElementById('tierList'); list.innerHTML=''; list.classList.add('path');
   TIERS.forEach((t,i)=>{
     const reached=lvl>=t.at, current=i===tp.idx;
-    const row=document.createElement('div'); row.className='tier-row'+(current?' current':'')+(reached?' reached':'');
-    row.innerHTML=`<div class="tier-thumb"><div class="tier-wolf"></div></div>
-      <div class="tier-info"><div class="tier-name">${t.name}</div><div class="tier-lvl">LV ${t.at}</div></div>
-      <div class="tier-mark">${reached?'✓':'🔒'}</div>`;
+    const row=document.createElement('div'); row.className='path-row '+(i%2?'right':'left');
+    const cls='path-node'+(current?' current':'')+(reached?' reached':' locked');
+    row.innerHTML=`<div class="${cls}">
+        ${current?'<span class="node-you">YOU</span>':''}
+        <div class="node-disc"><div class="node-wolf"></div>${reached?'':'<div class="node-lock">🔒</div>'}</div>
+        <div class="node-name">${t.name}</div>
+        <div class="node-lvl">${reached?'UNLOCKED':'LV '+t.at}</div>
+      </div>`;
     list.appendChild(row);
-    drawWolf(row.querySelector('.tier-wolf'), i);
-    row.querySelector('.tier-wolf').style.opacity = reached?'1':'0.4';
+    drawWolf(row.querySelector('.node-wolf'), i);
+    row.querySelector('.node-wolf').style.opacity = reached?'1':'0.5';
   });
   stagger([...list.children]);
 }

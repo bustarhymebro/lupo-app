@@ -295,7 +295,17 @@
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+    // Auto-apply new builds: when a fresh service worker takes control, reload once so
+    // an installed (home-screen) PWA never gets stuck showing a stale cached version.
+    let _swReloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (_swReloaded) return; _swReloaded = true; window.location.reload();
+    });
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        if (reg) { reg.update(); setInterval(() => reg.update(), 60 * 60 * 1000); }
+      }).catch(() => {});
+    });
   }
 </script>
 </body>
