@@ -226,6 +226,15 @@ function handleWolfUpload(file, band){
   };
   r.readAsDataURL(file);
 }
+function sparkBurst(el){
+  if(!el) return; const r=el.getBoundingClientRect(); const host=document.getElementById('app'); if(!host) return;
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  for(let i=0;i<9;i++){ const s=document.createElement('div'); s.className='spark'; s.textContent=i%2?'✦':'★';
+    s.style.left=cx+'px'; s.style.top=cy+'px'; host.appendChild(s);
+    const ang=Math.random()*Math.PI*2, dist=28+Math.random()*46;
+    s.animate([{transform:'translate(-50%,-50%) scale(.4)',opacity:1},{transform:`translate(calc(-50% + ${Math.cos(ang)*dist}px),calc(-50% + ${Math.sin(ang)*dist}px)) scale(1.15) rotate(${Math.random()*180-90}deg)`,opacity:0}],{duration:620+Math.random()*320,easing:'cubic-bezier(.2,.7,.3,1)'});
+    setTimeout(()=>s.remove(),980); }
+}
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; const cut=el.querySelector('.wolf-cut'); const t=cut||el; const cls=cut?'pet':'pop'; t.classList.remove('pet','pop'); void t.offsetWidth; t.classList.add(cls); setTimeout(()=>t.classList.remove('pet','pop'),700); }
 function sceneStars(){ const pos=[[16,20],[38,12],[66,16],[82,28],[26,38],[58,32],[74,46]]; return pos.map(([l,t])=>`<span class="scene-star" style="left:${l}%;top:${t}%;animation-delay:${((l%5)*0.4).toFixed(1)}s"></span>`).join(''); }
 function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src; if(el.dataset.w===key) return; el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}<div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
@@ -332,7 +341,7 @@ function toggleAndRefresh(k,card){
   const e2=ensureLog(todayKey()), isDone=e2[k]===true, nowAll=logAllRequiredDone(e2);
   card.classList.toggle('done',isDone);
   const cb=card.querySelector('.habit-check'); if(cb) cb.classList.toggle('checked',isDone);
-  if(isDone && window.Sound) Sound.check();
+  if(isDone){ if(window.Sound) Sound.check(); sparkBurst(card.querySelector('.habit-check')); }
   const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
   haptic(nowAll&&!wasAll?[12,40,18]:12);
   if(nowAll&&!wasAll){ celebrateWolf('wolfHome'); maybeCreditToday(); }
