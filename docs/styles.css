@@ -265,8 +265,12 @@ canvas{display:block;}
 @keyframes wBreathe{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
 .w-eyes{transform-box:fill-box;transform-origin:center;animation:wBlink 5.4s infinite;}
 @keyframes wBlink{0%,92%,100%{transform:scaleY(1);}96%{transform:scaleY(.08);}}
-.w-tail{transform-box:fill-box;transform-origin:90% 88%;animation:wWag 2.6s ease-in-out infinite;}
-@keyframes wWag{0%,100%{transform:rotate(-6deg);}50%{transform:rotate(8deg);}}
+.w-tail{transform-box:fill-box;transform-origin:10% 90%;animation:wWag 1.7s ease-in-out infinite;}
+@keyframes wWag{0%,100%{transform:rotate(-7deg);}50%{transform:rotate(10deg);}}
+.w-head{transform-box:fill-box;transform-origin:50% 92%;animation:wHead 5.5s ease-in-out infinite;}
+@keyframes wHead{0%,100%{transform:rotate(0) translateY(0);}50%{transform:rotate(-1.5deg) translateY(-1px);}}
+.w-ear{transform-box:fill-box;transform-origin:50% 100%;animation:wEar 6.5s ease-in-out infinite;}
+@keyframes wEar{0%,84%,100%{transform:rotate(0);}88%{transform:rotate(-5deg);}93%{transform:rotate(4deg);}}
 .wolf-svg.pop .w-all{animation:wPop .65s var(--spring);}
 @keyframes wPop{0%{transform:scale(.85);}55%{transform:scale(1.1);}100%{transform:scale(1);}}
 .ob-wolf-wrap .wolf-svg-el{height:250px;}

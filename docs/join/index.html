@@ -76,10 +76,10 @@ form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
   </div>
 
 <script>
-  // To collect emails centrally: create a free key at https://web3forms.com (enter your
-  // email, they send an access key instantly, no account). Paste it below and submissions
-  // land in your inbox. Until then, emails are saved locally as a fallback.
-  const ACCESS_KEY = ""; // <-- paste Web3Forms access key here
+  // Signups go straight to chleb@chleb.ai via Formsubmit (no account, no key needed).
+  // The FIRST signup triggers a one-time activation email to chleb@chleb.ai. Click the
+  // link in it once, and every signup after that lands in the inbox automatically.
+  const ENDPOINT = "https://formsubmit.co/ajax/chleb@chleb.ai";
 
   const form = document.getElementById('form');
   const btn = document.getElementById('btn');
@@ -96,14 +96,12 @@ form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
     btn.disabled = true; btn.textContent = 'JOINING…';
     // local fallback so nothing is lost
     try { const k='lupo.waitlist'; const arr=JSON.parse(localStorage.getItem(k)||'[]'); arr.push({email,ts:Date.now()}); localStorage.setItem(k,JSON.stringify(arr)); } catch(_){}
-    if(ACCESS_KEY){
-      try{
-        await fetch('https://api.web3forms.com/submit', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ access_key: ACCESS_KEY, subject:'New Lupo waitlist signup', email, from_name:'Lupo Waitlist' })
-        });
-      }catch(_){}
-    }
+    try{
+      await fetch(ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify({ email, _subject:'New Lupo waitlist signup', _template:'table' })
+      });
+    }catch(_){}
     showSuccess();
   });
 </script>

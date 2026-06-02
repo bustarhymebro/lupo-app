@@ -61,6 +61,7 @@ function defaultState(){
     reminders:false,
     tutorialSeen:false,
     lastCelebratedDay:null,
+    sound:true,
     pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
           consistentDays:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
@@ -80,6 +81,7 @@ function load(){
   if(state.timer === undefined) state.timer = null;
   if(state.tutorialSeen === undefined) state.tutorialSeen = false;
   if(state.lastCelebratedDay === undefined) state.lastCelebratedDay = null;
+  if(state.sound === undefined) state.sound = true;
 }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -177,7 +179,7 @@ function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700; const
 function setWolf(id,m){ LupoWolf.renderWolf(id,m); }
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),700); }
 function petWolf(){
-  celebrateWolf('wolfHome'); haptic(14);
+  celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
   const card=document.querySelector('.wolf-card'); if(!card) return;
   const glyphs=['♥','✦','★','♥'];
   for(let i=0;i<4;i++){ const h=document.createElement('div'); h.className='pet-heart'; h.textContent=glyphs[i];
@@ -264,7 +266,7 @@ function renderHabits(){
     ['.habit-card-body','.habit-card-ico','.habit-check'].forEach(sel=>{ const n=card.querySelector(sel); if(n) n.addEventListener('click',()=>toggleAndRefresh(k,card)); });
     const p=card.querySelector('.timer-pill');
     if(p) p.addEventListener('click',(ev)=>{ ev.stopPropagation();
-      if(p.dataset.act==='start'){ if(state.timer && !confirm('Another timer is running. Replace it?')) return; startTimer(k); }
+      if(p.dataset.act==='start'){ if(state.timer && !confirm('Another timer is running. Replace it?')) return; startTimer(k); if(window.Sound) Sound.start(); }
       else cancelTimer();
       haptic(12); renderHabits();
     });
@@ -279,6 +281,7 @@ function toggleAndRefresh(k,card){
   const e2=ensureLog(todayKey()), isDone=e2[k]===true, nowAll=logAllRequiredDone(e2);
   card.classList.toggle('done',isDone);
   const cb=card.querySelector('.habit-check'); if(cb) cb.classList.toggle('checked',isDone);
+  if(isDone && window.Sound) Sound.check();
   const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
   haptic(nowAll&&!wasAll?[12,40,18]:12);
   if(nowAll&&!wasAll) celebrateWolf('wolfHome');
@@ -391,7 +394,9 @@ function renderProfile(){
     ml.appendChild(row);
   });
   const rt=document.getElementById('reminderToggle'); rt.classList.toggle('on',!!state.reminders); rt.setAttribute('aria-pressed',!!state.reminders);
+  const st=document.getElementById('soundToggle'); if(st){ st.classList.toggle('on',!!state.sound); st.setAttribute('aria-pressed',!!state.sound); }
 }
+document.getElementById('soundToggle').addEventListener('click',()=>{ state.sound=!state.sound; if(window.Sound) Sound.on(state.sound); save(); haptic(10); if(state.sound && window.Sound) Sound.tap(); renderProfile(); });
 document.getElementById('renameBtn').addEventListener('click',()=>{ const v=document.getElementById('renameInput').value.trim()||'Lupo'; state.pet.name=v; save(); haptic(12); const b=document.getElementById('renameBtn'); b.textContent='SAVED'; setTimeout(()=>b.textContent='SAVE',1000); });
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
   if(!state.reminders){ if('Notification' in window){ try{ await Notification.requestPermission(); }catch(e){} } state.reminders=true; }
@@ -421,7 +426,7 @@ function showStageUp(){
   document.getElementById('stageUpTag').textContent=BAND_TAG[band(lvl)];
   setWolf('wolfStageUp', maturityAtLevel(lvl));
   document.getElementById('stageUp').hidden=false;
-  haptic([18,60,30,60,40]); celebrateWolf('wolfStageUp');
+  haptic([18,60,30,60,40]); if(window.Sound) Sound.level(); celebrateWolf('wolfStageUp');
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);
 }
 document.getElementById('stageUpBtn').addEventListener('click',()=>{ document.getElementById('stageUp').hidden=true; haptic(10); });
@@ -436,7 +441,7 @@ function maybeDayComplete(){
 function showDayComplete(){
   document.getElementById('dayCompleteSub').textContent = state.pet.name + " grew today. Come back tomorrow. Don't break the chain.";
   document.getElementById('dayComplete').hidden=false;
-  haptic([14,50,24,50,30]);
+  haptic([14,50,24,50,30]); if(window.Sound) Sound.day();
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
 }
 document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ document.getElementById('dayComplete').hidden=true; haptic(10); });
@@ -511,5 +516,5 @@ function enterApp(){
   if(pendingStageUp){ pendingStageUp=false; showStageUp(); }
   else if(!state.tutorialSeen){ showTutorial(); }
 }
-function boot(){ load(); startTick(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); checkTimer(); enterApp(); } }
+function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); checkTimer(); enterApp(); } }
 window.addEventListener('load', boot);
