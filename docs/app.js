@@ -190,7 +190,15 @@ const screens = {
   stats:  document.getElementById('screen-stats'),
 };
 let currentScreen = 'home';
-const wolves = {}; // animated wolf controllers
+const HERO_H = [156, 180, 200, 220, 240];
+function setWolf(id, stage){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const src = 'assets/wolf/stage-' + stage + '.png';
+  if(el.getAttribute('src') !== src) el.src = src;
+  if(id === 'wolfHome') el.style.height = HERO_H[Math.min(stage,4)] + 'px';
+}
+function celebrateWolf(id){ const el = document.getElementById(id); if(!el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(() => el.classList.remove('pop'), 700); }
 
 function haptic(ms){ try{ if(navigator.vibrate && (!navigator.userActivation || navigator.userActivation.isActive)) navigator.vibrate(ms); }catch(e){} }
 function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
@@ -239,9 +247,7 @@ function renderHome(){
   document.getElementById('moodMsg').textContent =
     '"' + (STAGE_MOOD_MSG[p.stage][p.mood] || '') + '"';
 
-  const hc = document.getElementById('wolfHome');
-  if(!wolves.home) wolves.home = LupoWolf.mount(hc, p.stage, {mood:p.mood});
-  else { wolves.home.setStage(p.stage); wolves.home.setMood(p.mood); }
+  setWolf('wolfHome', p.stage);
 
   document.getElementById('stageLine').textContent =
     `STAGE ${p.stage} · ${STAGES[p.stage].name.toUpperCase()}`;
@@ -326,7 +332,7 @@ function renderHabits(){
       card.querySelector('.habit-check').classList.toggle('checked', isDone);
       const nowAll = logAllRequiredDone(e2);
       haptic(nowAll && !wasAll ? [12,40,18] : 12);
-      if(nowAll && !wasAll && wolves.home) wolves.home.celebrate();
+      if(nowAll && !wasAll) celebrateWolf('wolfHome');
       updateHabitCompletion(false);
     });
     list.appendChild(card);
@@ -389,12 +395,10 @@ function renderStats(){
     const cell = document.createElement('div');
     cell.className = 'growth-cell' + (ach?' ach':'') + (cur?' cur':'');
     cell.innerHTML =
-      `<div class="growth-node ${cur?'cur':''}"><canvas width="80" height="80"></canvas></div>
+      `<div class="growth-node ${cur?'cur':''}"><img class="growth-img" src="assets/wolf/stage-${i}.png" alt=""></div>
        <div class="growth-name">${s.name.split(' ')[0].toUpperCase()}</div>`;
     gr.appendChild(cell);
-    const cv = cell.querySelector('canvas');
-    LupoWolf.still(cv, i);
-    cv.style.opacity = ach ? '1' : '0.3';
+    cell.querySelector('.growth-img').style.opacity = ach ? '1' : '0.32';
     if(i < STAGES.length-1){
       const link = document.createElement('div');
       link.className = 'growth-link' + (i < p.stage ? ' ach' : '');
@@ -478,17 +482,15 @@ function showStageUp(){
   const p = state.pet;
   document.getElementById('stageUpName').textContent = STAGES[p.stage].name.toUpperCase();
   document.getElementById('stageUpTag').textContent = STAGES[p.stage].tag;
-  const cv = document.getElementById('wolfStageUp');
-  if(wolves.stageup) wolves.stageup.stop();
-  wolves.stageup = LupoWolf.mount(cv, p.stage, {mood:'thriving'});
+  setWolf('wolfStageUp', p.stage);
   document.getElementById('stageUp').hidden = false;
   haptic([18,60,30,60,40]);
-  setTimeout(()=> { wolves.stageup.celebrate(); burstConfetti(document.querySelector('.stageup-inner')); }, 250);
+  celebrateWolf('wolfStageUp');
+  setTimeout(()=> burstConfetti(document.querySelector('.stageup-inner')), 200);
 }
 document.getElementById('stageUpBtn').addEventListener('click', () => {
   document.getElementById('stageUp').hidden = true;
   haptic(10);
-  if(wolves.stageup){ wolves.stageup.stop(); wolves.stageup = null; }
 });
 
 // ═══════════════════════════════════════════════════════
@@ -502,7 +504,7 @@ function startOnboarding(){
   document.getElementById('screen-onboarding').hidden = false;
   obPage = 0; obSelected = [];
   renderOnboarding();
-  if(!wolves.onboard) wolves.onboard = LupoWolf.mount(document.getElementById('wolfOnboard'), 4, {isOnboard:true, mood:'thriving'});
+  setWolf('wolfOnboard', 4);
 }
 
 function renderOnboarding(){
@@ -512,7 +514,7 @@ function renderOnboarding(){
   next.textContent = obPage === 2 ? 'BEGIN' : 'CONTINUE';
 
   if(obPage === 1){
-    if(!wolves.name) wolves.name = LupoWolf.mount(document.getElementById('wolfName'), 2, {isOnboard:true, mood:'good'});
+    setWolf('wolfName', 2);
     const inp = document.getElementById('petNameInput');
     next.disabled = inp.value.trim().length === 0;
   }else{
@@ -579,7 +581,6 @@ function completeOnboarding(name, selected){
   ensureLog(todayKey());
   save();
   haptic([12,50,20]);
-  ['onboard','name'].forEach(k => { if(wolves[k]){ wolves[k].stop(); wolves[k] = null; } });
   enterApp();
 }
 

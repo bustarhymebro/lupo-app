@@ -235,3 +235,16 @@ canvas{display:block;}
 
 /* confetti */
 .confetti{position:absolute;width:9px;height:9px;border-radius:2px;top:40%;left:50%;pointer-events:none;}
+
+/* ─────────── real illustrated wolf image ─────────── */
+.wolf-portrait{display:flex;align-items:center;justify-content:center;position:relative;}
+.wolf-img{height:200px;width:auto;max-width:92%;object-fit:contain;border-radius:26px;
+  box-shadow:0 18px 44px rgba(0,0,0,0.55),0 0 64px rgba(245,166,35,0.12);
+  animation:float 4.6s ease-in-out infinite;will-change:transform;}
+@keyframes float{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-9px) scale(1.012);}}
+.wolf-img.pop{animation:wolfPop .65s var(--spring);}
+@keyframes wolfPop{0%{transform:scale(.82);}55%{transform:scale(1.1);}100%{transform:scale(1);}}
+.ob-wolf-wrap .wolf-img{height:248px;}
+.ob-wolf-wrap.small .wolf-img,.wolf-portrait.sm .wolf-img{height:176px;}
+#wolfStageUp{height:200px;}
+.growth-img{width:48px;height:48px;border-radius:13px;object-fit:cover;}

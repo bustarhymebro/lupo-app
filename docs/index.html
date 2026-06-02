@@ -34,7 +34,7 @@
     <!-- Page 0: Welcome -->
     <div class="ob-page" data-page="0">
       <div class="ob-wolf-wrap">
-        <canvas class="wolf-canvas" id="wolfOnboard" width="320" height="280"></canvas>
+        <div class="wolf-portrait"><img class="wolf-img" id="wolfOnboard" src="assets/wolf/stage-4.png" alt="Lupo"></div>
       </div>
       <h1 class="ob-title">Meet Lupo.</h1>
       <p class="ob-sub">A wolf you raise by earning it in real life. Stay consistent and he grows. Slip and he regresses. He expects more from you.</p>
@@ -44,7 +44,7 @@
     <!-- Page 1: Name -->
     <div class="ob-page" data-page="1" hidden>
       <div class="ob-wolf-wrap small">
-        <canvas class="wolf-canvas" id="wolfName" width="240" height="200"></canvas>
+        <div class="wolf-portrait sm"><img class="wolf-img" id="wolfName" src="assets/wolf/stage-2.png" alt="Lupo"></div>
       </div>
       <h1 class="ob-title">Name your pup.</h1>
       <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
@@ -80,7 +80,7 @@
 
       <div class="wolf-card">
         <div class="wolf-breathe">
-          <canvas class="wolf-canvas" id="wolfHome" width="340" height="250"></canvas>
+          <div class="wolf-portrait"><img class="wolf-img" id="wolfHome" src="assets/wolf/stage-0.png" alt="Lupo"></div>
         </div>
         <div class="stage-line" id="stageLine">STAGE 0 · NEWBORN PUP</div>
         <div class="stage-tag" id="stageTag">—</div>
@@ -176,7 +176,7 @@
   <div class="stageup" id="stageUp" hidden>
     <div class="stageup-inner">
       <div class="stageup-kicker">STAGE UP</div>
-      <canvas class="wolf-canvas" id="wolfStageUp" width="260" height="220"></canvas>
+      <div class="wolf-portrait"><img class="wolf-img" id="wolfStageUp" src="assets/wolf/stage-4.png" alt="Lupo"></div>
       <div class="stageup-name" id="stageUpName">—</div>
       <div class="stageup-tag" id="stageUpTag">—</div>
       <button class="btn-primary narrow" id="stageUpBtn" type="button">CONTINUE</button>
@@ -185,7 +185,6 @@
 
 </div>
 
-<script src="wolf.js"></script>
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
