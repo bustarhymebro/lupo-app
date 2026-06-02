@@ -69,8 +69,8 @@ function defaultState(){
     creditedDays:[],
     sound:true,
     wolfArt:{},
-    pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
-          consistentDays:0, totalDaysTracked:0,
+    pet:{ name:'Lupo', stage:0, tierIdx:0, maxTierIdx:0, energy:0.5, mood:'neutral',
+          consistentDays:0, currentStreak:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
           lastScoredDay:dateKey(new Date()), missedDaysStreak:0 },
     timer:null,
@@ -101,7 +101,8 @@ function load(){
   if(!Array.isArray(state.creditedDays)) state.creditedDays = [];
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
   if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
-  ['energy','consistentDays','totalDaysTracked','missedDaysStreak','stage','tierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
+  ['energy','consistentDays','currentStreak','totalDaysTracked','missedDaysStreak','stage','tierIdx','maxTierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
+  if(state.pet.maxTierIdx < state.pet.tierIdx) state.pet.maxTierIdx = state.pet.tierIdx; // never re-celebrate already-earned forms
   state.pet.energy = Math.max(0, Math.min(1, state.pet.energy));
   if(typeof state.pet.name!=='string' || !state.pet.name) state.pet.name='Lupo';
   let _lu = new Date(state.pet.lastUpdated);
@@ -178,10 +179,10 @@ function checkForNewDay(){
     if(state.creditedDays.indexOf(dk) === -1){ // not already credited live that day
       state.pet.totalDaysTracked += 1;
       if(logAllRequiredDone(state.logs[dk])){
-        state.pet.consistentDays += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
+        state.pet.consistentDays += 1; state.pet.currentStreak += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
         state.creditedDays.push(dk);
       } else {
-        state.pet.missedDaysStreak += 1; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
+        state.pet.missedDaysStreak += 1; state.pet.currentStreak = 0; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
         if(state.pet.missedDaysStreak >= 3) state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 2);
       }
     }
@@ -201,7 +202,7 @@ function checkForNewDay(){
   if(state.creditedDays.length > 120) state.creditedDays = state.creditedDays.slice(-120);
   const cut = dateKey(addDays(today, -90));
   Object.keys(state.logs).forEach(k=>{ if(k < cut) delete state.logs[k]; });
-  if(state.pet.tierIdx > prevTier) pendingStageUp = true;
+  if(state.pet.tierIdx > state.pet.maxTierIdx){ state.pet.maxTierIdx = state.pet.tierIdx; pendingStageUp = true; }
   save();
 }
 // Immediate same-day growth: finishing your required habits levels the wolf now.
@@ -209,20 +210,21 @@ function maybeCreditToday(){
   const tk = todayKey();
   if(state.creditedDays.indexOf(tk) !== -1) return false;
   if(!logAllRequiredDone(ensureLog(tk))) return false;
-  const prevTier = state.pet.tierIdx;
   state.creditedDays.push(tk);
   state.pet.consistentDays += 1;
+  state.pet.currentStreak += 1;
   state.pet.totalDaysTracked += 1;
   state.pet.missedDaysStreak = 0;
   state.pet.energy = Math.min(1, state.pet.energy + 0.2);
   state.pet.mood = moodForEnergy(state.pet.energy);
   state.pet.stage = band(levelOf());
   state.pet.tierIdx = tierIdx(levelOf());
+  const leveled = state.pet.tierIdx > state.pet.maxTierIdx; // only a brand-new form (not a re-climb) celebrates
+  if(leveled) state.pet.maxTierIdx = state.pet.tierIdx;
   state.pet.lastUpdated = new Date().toISOString();
   save();
   if(!screens.home.hidden) renderHome();
   if(!screens.journey.hidden) renderJourney();
-  const leveled = state.pet.tierIdx > prevTier;
   if(leveled){ pendingStageUp=false; showStageUp(); }
   return leveled; // true only when a NEW FORM overlay was shown (so callers suppress the day-complete popup)
 }
@@ -232,6 +234,7 @@ function uncreditToday(){
   if(i===-1) return false;
   state.creditedDays.splice(i,1);
   state.pet.consistentDays = Math.max(0, state.pet.consistentDays-1);
+  state.pet.currentStreak = Math.max(0, state.pet.currentStreak-1);
   state.pet.totalDaysTracked = Math.max(0, state.pet.totalDaysTracked-1);
   state.pet.energy = Math.max(0, state.pet.energy-0.2);
   state.pet.mood = moodForEnergy(state.pet.energy);
@@ -308,7 +311,9 @@ function sparkBurst(el){
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; const cut=el.querySelector('.wolf-cut'); const t=cut||el; const cls=cut?'pet':'pop'; t.classList.remove('pet','pop'); void t.offsetWidth; t.classList.add(cls); setTimeout(()=>t.classList.remove('pet','pop'),700); }
 function sceneStars(){ const pos=[[16,20],[38,12],[66,16],[82,28],[26,38],[58,32],[74,46]]; return pos.map(([l,t])=>`<span class="scene-star" style="left:${l}%;top:${t}%;animation-delay:${((l%5)*0.4).toFixed(1)}s"></span>`).join(''); }
 function sceneMotes(){ const pos=[[28,66],[46,74],[62,62],[72,80],[34,84],[56,88]]; return pos.map(([l,t],k)=>`<span class="mote" style="left:${l}%;top:${t}%;animation-delay:${(k*2.7).toFixed(1)}s"></span>`).join(''); }
-function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src; if(el.dataset.w===key) return; el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}${sceneMotes()}<div class="scene-ridge back"></div><div class="scene-ridge"></div><div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
+function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src;
+  if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}${sceneMotes()}<div class="scene-ridge back"></div><div class="scene-ridge"></div><div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
+  const sc=el.querySelector('.scene'); if(sc){ sc.dataset.tod=todBucket(); if(state&&state.pet&&state.pet.mood) sc.dataset.mood=state.pet.mood; } }
 function petWolf(){
   celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
   sparkBurst(document.querySelector('#wolfHome .wolf-cut'));
@@ -346,11 +351,10 @@ function renderHome(){
   const p = state.pet, lvl = levelOf(), tp = tierProgress(), b = band(lvl);
   document.getElementById('homeName').textContent = p.name.toUpperCase();
   document.getElementById('homeDate').textContent = fmtDate(new Date());
-  document.getElementById('streakCount').textContent = lvl;
+  document.getElementById('streakCount').textContent = p.currentStreak;
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   drawWolfScene('wolfHome', tierIdx(lvl));
-  { const sc=document.querySelector('#wolfHome .scene'); if(sc){ sc.dataset.mood=p.mood; sc.dataset.tod=todBucket(); } }
   const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer';
     hw.setAttribute('role','button'); hw.setAttribute('tabindex','0');
     hw.addEventListener('click', petWolf);
@@ -458,7 +462,6 @@ function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
   drawWolfScene('wolfJourney', tierIdx(lvl));
-  { const sc=document.querySelector('#wolfJourney .scene'); if(sc){ sc.dataset.mood=state.pet.mood; sc.dataset.tod=todBucket(); } }
   document.getElementById('journeyLevel').textContent='LV '+displayLevel();
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
@@ -496,7 +499,7 @@ function renderStats(){
   const grid=document.getElementById('statGrid');
   const cards=[
     {ico:'📅',label:'TOTAL DAYS',to:p.totalDaysTracked,suffix:'',color:'#fff'},
-    {ico:'🔥',label:'STREAK',to:lvl,suffix:'',color:'#F5A623'},
+    {ico:'🔥',label:'STREAK',to:p.currentStreak,suffix:'',color:'#F5A623'},
     {ico:'⭐',label:'LEVEL',to:displayLevel(),suffix:'',sub:tp.cur.name.toUpperCase(),color:'#F5A623'},
     {ico:'✓',label:'COMPLETION',to:Math.round(oc*100),suffix:'%',color:oc>0.7?'#22C55E':'#F5A623'},
   ];
@@ -741,7 +744,7 @@ function enterApp(){
 }
 // the wolf fidgets on its own so it always feels alive
 setInterval(()=>{ if(!state || document.hidden || screens.home.hidden || reduceMotion()) return; const cut=document.querySelector('#wolfHome .wolf-cut'); if(cut && Math.random()<0.6){ cut.classList.remove('pet'); void cut.offsetWidth; cut.classList.add('pet'); setTimeout(()=>cut.classList.remove('pet'),650); } }, 8000);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && state && state.onboarded){ checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); if(!screens.home.hidden) renderHome(); } });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && state && state.onboarded){ checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); if(!screens.home.hidden) renderHome(); if(pendingStageUp && !document.querySelector('.stageup:not([hidden])')){ pendingStageUp=false; showStageUp(); } } });
 function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick();
   if(!state.onboarded){ startOnboarding(); }
   else { checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); enterApp(); } }
