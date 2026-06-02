@@ -33,15 +33,22 @@ function maturityAtTier(i){ return i/(TIERS.length-1); }
 const band = (lvl) => Math.min(Math.floor(maturityAtLevel(lvl) * 5), 4);
 
 // ── Habits ──
+// kind: 'limit' (stay under, manual confirm) | 'timer' (run a countdown) | 'check' (manual)
+function fmtT(t,u){ if(u==='h'){ const w=Math.floor(t),m=Math.round((t-w)*60); return (w?w+'h':'')+(m?(w?' ':'')+m+'m':(w?'':'0m')); } return t+' min'; }
 const HABITS = {
-  screenTime:{ name:'Screen Time', icon:'📵', required:true,  targetLabel:'Under 3 hrs', auto:'Auto-verified in the iOS app' },
-  sleep:     { name:'Sleep',       icon:'🌙', required:false, targetLabel:'7.5 hrs minimum' },
-  workout:   { name:'Workout',     icon:'💪', required:false, targetLabel:'30 min active' },
-  focus:     { name:'Focus',       icon:'🧠', required:false, targetLabel:'2 hrs deep work' },
-  read:      { name:'Read',        icon:'📖', required:false, targetLabel:'20 min' },
-  water:     { name:'Hydrate',     icon:'💧', required:false, targetLabel:'2 L' },
+  screenTime:{ name:'Screen Time',      icon:'📵', required:true,  kind:'limit', def:3,  unit:'h', min:1,   max:8,   step:0.5, auto:'Auto-verified in the iOS app', label:t=>`Stay under ${fmtT(t,'h')}` },
+  sleep:     { name:'Sleep',            icon:'🌙', required:false, kind:'timer', def:8,  unit:'h', min:4,   max:12,  step:0.5, label:t=>`${fmtT(t,'h')} of sleep` },
+  focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:0.5, max:8,   step:0.5, label:t=>`${fmtT(t,'h')} off your phone` },
+  workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:10,  max:120, step:5,   label:t=>`${fmtT(t,'m')} active` },
+  read:      { name:'Read',             icon:'📖', required:false, kind:'timer', def:20, unit:'m', min:5,   max:120, step:5,   label:t=>`${fmtT(t,'m')} reading` },
+  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'check', def:8,  unit:'cups', min:1, max:16, step:1,   label:t=>`${t} cups` },
 };
-const HABIT_ORDER = ['screenTime','sleep','workout','focus','read','water'];
+const HABIT_ORDER = ['screenTime','sleep','focus','workout','read','water'];
+function habitTarget(k){ const h=state.habits[k]; return (h && h.target!=null) ? h.target : HABITS[k].def; }
+function habitLabel(k){ return HABITS[k].label(habitTarget(k)); }
+function targetMs(k){ const t=habitTarget(k); return HABITS[k].unit==='h' ? t*3600000 : t*60000; }
+function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cups'? t+' cups' : fmtT(t,u); }
+function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
 const STORE_KEY = 'lupo.v2';
@@ -56,8 +63,9 @@ function defaultState(){
           consistentDays:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
           missedDaysStreak:0 },
-    habits:{ screenTime:{enabled:true}, sleep:{enabled:false}, workout:{enabled:false},
-             focus:{enabled:false}, read:{enabled:false}, water:{enabled:false} },
+    timer:null,
+    habits:{ screenTime:{enabled:true,target:3}, sleep:{enabled:false,target:8}, focus:{enabled:false,target:2},
+             workout:{enabled:false,target:30}, read:{enabled:false,target:20}, water:{enabled:false,target:8} },
     logs:{},
   };
 }
@@ -66,7 +74,8 @@ function load(){
   catch(e){ state = defaultState(); }
   if(!state.logs) state.logs = {};
   if(!state.habits) state.habits = defaultState().habits;
-  HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k] = {enabled:false}; });
+  HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k] = {enabled:false}; if(state.habits[k].target==null) state.habits[k].target = HABITS[k].def; });
+  if(state.timer === undefined) state.timer = null;
 }
 function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
 
@@ -130,6 +139,24 @@ function checkForNewDay(){
 }
 function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mood=moodForEnergy(state.pet.energy); save(); }
 
+// ── Timer (Forest-style countdown; persists via timestamps) ──
+function startTimer(k){ state.timer={key:k,start:Date.now(),dur:targetMs(k)}; save(); }
+function cancelTimer(){ state.timer=null; save(); }
+function timerLeftMs(){ if(!state.timer) return 0; return Math.max(0, state.timer.dur-(Date.now()-state.timer.start)); }
+function timerFrac(){ if(!state.timer) return 0; return Math.min(1,(Date.now()-state.timer.start)/state.timer.dur); }
+function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; ensureLog(todayKey())[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
+function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(sec).padStart(2,'0'); }
+let tickStarted=false;
+function startTick(){ if(tickStarted) return; tickStarted=true; setInterval(()=>{
+  if(!state || !state.timer) return;
+  const done=checkTimer();
+  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); return; }
+  const left=fmtClock(timerLeftMs()), off=String((1-timerFrac())*(2*Math.PI*26));
+  document.querySelectorAll('[data-timer-clock]').forEach(el=> el.textContent=left);
+  document.querySelectorAll('[data-timer-ring]').forEach(el=> el.style.strokeDashoffset=off);
+},1000); }
+
 // ═══════════════════════════════════════════════════════
 //  NAVIGATION + helpers
 // ═══════════════════════════════════════════════════════
@@ -171,6 +198,7 @@ function renderHome(){
   document.getElementById('homeDate').textContent = fmtDate(new Date());
   document.getElementById('streakCount').textContent = lvl;
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
+  renderTimerBanner('homeTimer');
   setWolf('wolfHome', maturityAtLevel(lvl));
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
@@ -203,28 +231,55 @@ function renderHome(){
 // ═══════════════════════════════════════════════════════
 function renderHabits(){
   document.getElementById('habitsDate').textContent = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}).toUpperCase();
+  renderTimerBanner('habitsTimer');
   const entry = ensureLog(todayKey());
   const list = document.getElementById('habitList'); list.innerHTML='';
   enabledHabits().forEach(k=>{
-    const h=HABITS[k], done=entry[k]===true;
-    const card=document.createElement('div'); card.className='habit-card'+(done?' done':'');
+    const h=HABITS[k], done=entry[k]===true, isTimer=h.kind==='timer';
+    const activeForThis = state.timer && state.timer.key===k;
+    const card=document.createElement('div'); card.className='habit-card'+(done?' done':'')+(activeForThis?' running':'');
+    let pill='';
+    if(isTimer){
+      if(activeForThis) pill=`<button class="timer-pill stop" data-act="cancel"><span data-timer-clock>${fmtClock(timerLeftMs())}</span></button>`;
+      else pill=`<button class="timer-pill" data-act="start" ${done?'style="display:none"':''}>▶ Start</button>`;
+    }
     card.innerHTML=`<div class="habit-card-ico">${h.icon}</div>
-      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target">${h.targetLabel}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
+      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target">${habitLabel(k)}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
+      ${pill}
       <div class="habit-check ${done?'checked':''}"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
-    card.addEventListener('click',()=>{
-      const wasAll=logAllRequiredDone(ensureLog(todayKey()));
-      toggleHabit(k);
-      const e2=ensureLog(todayKey()), isDone=e2[k]===true;
-      card.classList.toggle('done',isDone); card.querySelector('.habit-check').classList.toggle('checked',isDone);
-      const nowAll=logAllRequiredDone(e2);
-      haptic(nowAll&&!wasAll?[12,40,18]:12);
-      if(nowAll&&!wasAll) celebrateWolf('wolfHome');
-      updateHabitCompletion(false);
+    ['.habit-card-body','.habit-card-ico','.habit-check'].forEach(sel=>{ const n=card.querySelector(sel); if(n) n.addEventListener('click',()=>toggleAndRefresh(k,card)); });
+    const p=card.querySelector('.timer-pill');
+    if(p) p.addEventListener('click',(ev)=>{ ev.stopPropagation();
+      if(p.dataset.act==='start'){ if(state.timer && !confirm('Another timer is running. Replace it?')) return; startTimer(k); }
+      else cancelTimer();
+      haptic(12); renderHabits();
     });
     list.appendChild(card);
   });
   stagger([...list.children]);
   updateHabitCompletion(true);
+}
+function toggleAndRefresh(k,card){
+  const wasAll=logAllRequiredDone(ensureLog(todayKey()));
+  toggleHabit(k);
+  const e2=ensureLog(todayKey()), isDone=e2[k]===true, nowAll=logAllRequiredDone(e2);
+  card.classList.toggle('done',isDone);
+  const cb=card.querySelector('.habit-check'); if(cb) cb.classList.toggle('checked',isDone);
+  const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
+  haptic(nowAll&&!wasAll?[12,40,18]:12);
+  if(nowAll&&!wasAll) celebrateWolf('wolfHome');
+  updateHabitCompletion(false);
+}
+function renderTimerBanner(elId){
+  const el=document.getElementById(elId); if(!el) return;
+  if(!state.timer){ el.innerHTML=''; return; }
+  const k=state.timer.key, h=HABITS[k], C=(2*Math.PI*26).toFixed(2);
+  el.innerHTML=`<div class="timer-card">
+    <svg class="timer-ring" viewBox="0 0 60 60"><circle class="ring-bg" cx="30" cy="30" r="26"/><circle class="ring-fg" cx="30" cy="30" r="26" data-timer-ring stroke-dasharray="${C}" stroke-dashoffset="${((1-timerFrac())*C).toFixed(2)}"/></svg>
+    <div class="timer-info"><div class="timer-name">${h.icon} ${h.name}</div><div class="timer-clock"><span data-timer-clock>${fmtClock(timerLeftMs())}</span> left</div><div class="timer-sub">Keep your phone down — your wolf is watching.</div></div>
+    <button class="timer-stop" type="button">STOP</button>
+  </div>`;
+  el.querySelector('.timer-stop').addEventListener('click',()=>{ if(confirm('Give up this session? You get no credit.')){ cancelTimer(); haptic(10); renderTimerBanner(elId); if(!screens.habits.hidden) renderHabits(); } });
 }
 function updateHabitCompletion(initial){
   const entry=ensureLog(todayKey()), rate=logCompletionRate(entry);
@@ -307,9 +362,17 @@ function renderProfile(){
   HABIT_ORDER.forEach(k=>{
     const h=HABITS[k], on=state.habits[k].enabled, locked=h.required;
     const row=document.createElement('div'); row.className='manage-row';
-    row.innerHTML=`<div class="manage-ico">${h.icon}</div><div class="manage-name">${h.name}${locked?' <span class="lock-tag">REQUIRED</span>':''}</div>
-      <button class="switch ${on?'on':''}" ${locked?'disabled':''} aria-pressed="${on}"></button>`;
-    if(!locked){ row.querySelector('.switch').addEventListener('click',()=>{ state.habits[k].enabled=!state.habits[k].enabled; ensureLog(todayKey()); save(); haptic(10); renderProfile(); }); }
+    row.innerHTML=`<div class="manage-top">
+        <div class="manage-ico">${h.icon}</div>
+        <div class="manage-name">${h.name}${locked?' <span class="lock-tag">REQUIRED</span>':''}</div>
+        <button class="switch ${on?'on':''}" ${locked?'disabled':''} aria-pressed="${on}"></button>
+      </div>
+      <div class="manage-bot">
+        <div class="manage-target">${h.kind==='limit'?'Goal · under ':'Goal · '}${targetShort(k)}</div>
+        <div class="stepper"><button class="step-btn" data-d="-1" type="button">–</button><span class="step-val">${targetShort(k)}</span><button class="step-btn" data-d="1" type="button">+</button></div>
+      </div>`;
+    row.querySelectorAll('.step-btn').forEach(b=> b.addEventListener('click',()=>{ adjustTarget(k,+b.dataset.d); haptic(8); renderProfile(); }));
+    if(!locked) row.querySelector('.switch').addEventListener('click',()=>{ state.habits[k].enabled=!state.habits[k].enabled; ensureLog(todayKey()); save(); haptic(10); renderProfile(); });
     ml.appendChild(row);
   });
   const rt=document.getElementById('reminderToggle'); rt.classList.toggle('on',!!state.reminders); rt.setAttribute('aria-pressed',!!state.reminders);
@@ -370,7 +433,7 @@ function buildHabitChooser(){
   const list=document.getElementById('obHabitList'); list.dataset.built='1'; list.innerHTML='';
   HABIT_ORDER.forEach(k=>{ const h=HABITS[k], locked=h.required;
     const row=document.createElement('button'); row.type='button'; row.className='ob-habit'+(locked?' on locked':'');
-    row.innerHTML=`<div class="ob-habit-ico">${h.icon}</div><div class="ob-habit-body"><div class="ob-habit-name">${h.name}</div><div class="ob-habit-desc">${h.targetLabel}</div>${locked?'<div class="ob-lock">ALWAYS ON</div>':''}</div>
+    row.innerHTML=`<div class="ob-habit-ico">${h.icon}</div><div class="ob-habit-body"><div class="ob-habit-name">${h.name}</div><div class="ob-habit-desc">${habitLabel(k)}</div>${locked?'<div class="ob-lock">ALWAYS ON</div>':''}</div>
       <div class="ob-check"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
     if(!locked) row.addEventListener('click',()=>{ const on=row.classList.toggle('on'); if(on)obSelected.push(k); else obSelected=obSelected.filter(x=>x!==k); haptic(8); });
     list.appendChild(row); });
@@ -395,5 +458,5 @@ function enterApp(){
   switchScreen('home');
   if(pendingStageUp){ pendingStageUp=false; showStageUp(); }
 }
-function boot(){ load(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); enterApp(); } }
+function boot(){ load(); startTick(); if(!state.onboarded) startOnboarding(); else { checkForNewDay(); checkTimer(); enterApp(); } }
 window.addEventListener('load', boot);
