@@ -4,9 +4,6 @@
 'use strict';
 
 // ── Growth model ──
-const DAYS_TO_ADULT = 120;                 // maturity reaches 1.0 here; growth continues past
-const maturity = (lvl) => Math.min(lvl / DAYS_TO_ADULT, 1);
-
 const TIERS = [
   {at:0,name:'Newborn Pup'},{at:3,name:'Pup'},{at:7,name:'Whelp'},{at:12,name:'Yearling'},
   {at:18,name:'Scout'},{at:25,name:'Tracker'},{at:33,name:'Prowler'},{at:42,name:'Hunter'},
@@ -30,7 +27,10 @@ const STAGE_MOOD_MSG = {
   3:{thriving:"Raw power. Earned by real work.",good:"He runs harder when you push harder.",neutral:"This close to greatness — and you're phoning it in.",disappointed:"Don't waste what you built.",struggling:"A wolf this far along doesn't have to fall. You chose this."},
   4:{thriving:"This is what discipline looks like. Own it.",good:"He howls on your schedule. Keep it.",neutral:"A wolf this powerful deserves better habits than this.",disappointed:"You've come too far to go soft.",struggling:"He remembers every day you didn't show up."},
 };
-const band = (lvl) => Math.min(Math.floor(maturity(lvl) * 5), 4);
+// maturity spans the full 0..1 morph across all named forms, so every tier looks distinct
+function maturityAtLevel(lvl){ const i=tierIdx(lvl), nx=TIERS[i+1]; if(!nx) return 1; const f=(lvl-TIERS[i].at)/(nx.at-TIERS[i].at); return Math.min(1,(i+f)/(TIERS.length-1)); }
+function maturityAtTier(i){ return i/(TIERS.length-1); }
+const band = (lvl) => Math.min(Math.floor(maturityAtLevel(lvl) * 5), 4);
 
 // ── Habits ──
 const HABITS = {
@@ -171,7 +171,7 @@ function renderHome(){
   document.getElementById('homeDate').textContent = fmtDate(new Date());
   document.getElementById('streakCount').textContent = lvl;
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
-  setWolf('wolfHome', maturity(lvl));
+  setWolf('wolfHome', maturityAtLevel(lvl));
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
 
@@ -241,7 +241,7 @@ document.getElementById('saveBtn').addEventListener('click',()=>{ save(); const 
 function renderJourney(){
   const lvl=levelOf(), tp=tierProgress();
   document.getElementById('journeySub').textContent='DAY '+state.pet.totalDaysTracked+' · '+TIERS.length+' FORMS TO MASTER';
-  setWolf('wolfJourney', maturity(lvl));
+  setWolf('wolfJourney', maturityAtLevel(lvl));
   document.getElementById('journeyLevel').textContent='LV '+lvl;
   document.getElementById('journeyTier').textContent=tp.cur.name.toUpperCase();
   if(!tp.next){ document.getElementById('journeyNextLabel').textContent='APEX FORM REACHED';
@@ -259,7 +259,7 @@ function renderJourney(){
       <div class="tier-info"><div class="tier-name">${t.name}</div><div class="tier-lvl">LV ${t.at}</div></div>
       <div class="tier-mark">${reached?'✓':'🔒'}</div>`;
     list.appendChild(row);
-    LupoWolf.renderWolf(row.querySelector('.tier-wolf'), maturity(t.at));
+    LupoWolf.renderWolf(row.querySelector('.tier-wolf'), maturityAtTier(i));
     row.querySelector('.tier-wolf').style.opacity = reached?'1':'0.4';
   });
   stagger([...list.children]);
@@ -341,7 +341,7 @@ function showStageUp(){
   document.querySelector('.stageup-kicker').textContent='NEW FORM';
   document.getElementById('stageUpName').textContent=TIERS[idx].name.toUpperCase();
   document.getElementById('stageUpTag').textContent=BAND_TAG[band(lvl)];
-  setWolf('wolfStageUp', maturity(lvl));
+  setWolf('wolfStageUp', maturityAtLevel(lvl));
   document.getElementById('stageUp').hidden=false;
   haptic([18,60,30,60,40]); celebrateWolf('wolfStageUp');
   setTimeout(()=>burstConfetti(document.querySelector('.stageup-inner')),200);

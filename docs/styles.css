@@ -2,14 +2,14 @@
    LUPO — premium dark discipline tracker
 ─────────────────────────────────────────────── */
 :root{
-  --bg:#0A0A0A; --bg2:#050505;
-  --card:#121212; --card2:#171717; --card3:#1F1F1F;
-  --gold:#F5A623; --gold2:#FFCB45;
-  --gold-dim:rgba(245,166,35,0.14);
-  --cream:#F3E9D8;
-  --white:#FFFFFF; --gray:#9A9A9A; --gray2:#666; --gray3:#333;
-  --success:#22C55E; --danger:#EF4444;
-  --border:rgba(255,255,255,0.07);
+  --bg:#121726; --bg2:#0C1019;
+  --card:#1B2132; --card2:#212a40; --card3:#2B3349;
+  --gold:#F5B544; --gold2:#FFD37A;
+  --gold-dim:rgba(245,181,68,0.16);
+  --cream:#F0E9DA;
+  --white:#EEF1F8; --gray:#9AA3B5; --gray2:#6B7488; --gray3:#3A4459;
+  --success:#34D17F; --danger:#F2685A;
+  --border:rgba(255,255,255,0.08);
   --display:'Bricolage Grotesque',-apple-system,system-ui,sans-serif;
   --body:'Onest',-apple-system,system-ui,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,monospace;
@@ -116,7 +116,7 @@ canvas{display:block;}
   border-radius:99px;padding:8px 14px;font-family:var(--mono);font-size:14px;font-weight:800;color:var(--gold);}
 .mood-msg{text-align:center;font-size:13.5px;font-style:italic;color:var(--cream);opacity:.8;padding:6px 34px 14px;line-height:1.5;}
 .wolf-card{position:relative;margin:0 18px 18px;border-radius:26px;
-  background:linear-gradient(180deg,#161616,#0D0D0D);border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(180deg,#1C2334,#11151f);border:1px solid rgba(255,255,255,0.07);
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.06),0 20px 50px rgba(0,0,0,0.5),0 0 60px rgba(245,166,35,0.05);
   padding:8px 0 18px;display:flex;flex-direction:column;align-items:center;overflow:hidden;}
 .wolf-card::before{content:'';position:absolute;top:-40%;left:50%;transform:translateX(-50%);width:70%;height:70%;
@@ -209,7 +209,7 @@ canvas{display:block;}
 
 /* ─────────── TAB BAR ─────────── */
 .tab-bar{position:absolute;left:0;right:0;bottom:0;height:calc(66px + var(--safe-bot));padding-bottom:var(--safe-bot);
-  display:flex;background:rgba(8,8,8,0.86);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
+  display:flex;background:rgba(13,17,27,0.9);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
   border-top:1px solid var(--border);z-index:20;}
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--gray2);transition:color .25s;position:relative;}
 .tab span{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.8px;}
@@ -222,7 +222,7 @@ canvas{display:block;}
 
 /* ─────────── STAGE UP ─────────── */
 .stageup{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at center,rgba(20,14,2,0.97),rgba(5,5,5,0.98));animation:fadeBg .4s ease;}
+  background:radial-gradient(ellipse at center,rgba(34,30,16,0.96),rgba(10,13,21,0.98));animation:fadeBg .4s ease;}
 @keyframes fadeBg{from{opacity:0;}to{opacity:1;}}
 .stageup-inner{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:24px;position:relative;}
 .stageup-kicker{font-family:var(--display);font-size:40px;font-weight:800;letter-spacing:4px;color:var(--gold);
