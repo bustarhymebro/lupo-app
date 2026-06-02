@@ -176,6 +176,14 @@ function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700; const
   (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1)requestAnimationFrame(tick); })(performance.now()); }
 function setWolf(id,m){ LupoWolf.renderWolf(id,m); }
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); setTimeout(()=>el.classList.remove('pop'),700); }
+function petWolf(){
+  celebrateWolf('wolfHome'); haptic(14);
+  const card=document.querySelector('.wolf-card'); if(!card) return;
+  const glyphs=['♥','✦','★','♥'];
+  for(let i=0;i<4;i++){ const h=document.createElement('div'); h.className='pet-heart'; h.textContent=glyphs[i];
+    h.style.left=(36+Math.random()*28)+'%'; h.style.animationDelay=(i*60)+'ms'; card.appendChild(h);
+    setTimeout(()=>h.remove(),1200); }
+}
 
 function switchScreen(name){
   SCREENS.forEach(s => screens[s].hidden = (s!==name));
@@ -205,6 +213,7 @@ function renderHome(){
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   setWolf('wolfHome', maturityAtLevel(lvl));
+  const hw=document.getElementById('wolfHome'); if(hw && !hw.dataset.pet){ hw.dataset.pet='1'; hw.style.cursor='pointer'; hw.addEventListener('click', petWolf); }
   document.getElementById('stageLine').textContent = 'LV ' + lvl + ' · ' + tp.cur.name.toUpperCase();
   document.getElementById('stageTag').textContent = BAND_TAG[b];
 

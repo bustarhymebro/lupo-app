@@ -243,6 +243,10 @@ canvas{display:block;}
 #tutWolf{display:flex;justify-content:center;}
 #tutWolf .wolf-svg-el{height:184px;}
 
+/* tap-to-pet sparks */
+.pet-heart{position:absolute;top:54%;font-size:18px;color:var(--gold);pointer-events:none;z-index:3;text-shadow:0 0 8px rgba(245,181,68,.6);animation:heartUp 1.1s ease-out forwards;}
+@keyframes heartUp{0%{opacity:0;transform:translateY(6px) scale(.5);}20%{opacity:1;}100%{opacity:0;transform:translateY(-72px) scale(1.25);}}
+
 /* ─────────── real illustrated wolf image ─────────── */
 .wolf-portrait{display:flex;align-items:center;justify-content:center;position:relative;}
 .wolf-img{height:200px;width:auto;max-width:92%;object-fit:contain;border-radius:26px;
