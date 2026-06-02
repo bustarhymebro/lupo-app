@@ -376,6 +376,13 @@ canvas{display:block;}
 .ob-wolf-wrap .scene{min-height:270px;} .ob-wolf-wrap .wolf-cut{height:250px;}
 .ob-wolf-wrap.small .scene,.wolf-portrait.sm .scene{min-height:200px;} .wolf-portrait.sm .wolf-cut{height:185px;}
 
+/* ── Accessibility ── */
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:8px;}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}
+  .scene-star,.scene-moon,.wolf-cut{animation:none!important;}
+}
+
 /* ─────────── TIMER ─────────── */
 .timer-pill{height:42px;padding:0 16px;border-radius:13px;background:var(--gold-dim);border:1px solid rgba(245,181,68,.4);color:var(--gold);font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.5px;flex-shrink:0;transition:transform .12s;}
 .timer-pill:active{transform:scale(.95);}

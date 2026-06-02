@@ -1,10 +1,9 @@
 // Lupo service worker. Offline-first cache
-const CACHE = 'lupo-v17';
+const CACHE = 'lupo-v18';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
-  './svgwolf.js',
   './sound.js',
   './app.js',
   './manifest.webmanifest',
@@ -40,6 +39,10 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
       }
       return res;
-    }).catch(() => caches.match(e.request).then((c) => c || caches.match('./index.html')))
+    }).catch(() => caches.match(e.request).then((c) => {
+      if (c) return c;
+      if (e.request.mode === 'navigate') return caches.match('./index.html');
+      return Response.error();
+    }))
   );
 });

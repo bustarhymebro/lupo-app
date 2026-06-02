@@ -69,7 +69,7 @@ function defaultState(){
     pet:{ name:'Lupo', stage:0, tierIdx:0, energy:0.5, mood:'neutral',
           consistentDays:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
-          missedDaysStreak:0 },
+          lastScoredDay:dateKey(new Date()), missedDaysStreak:0 },
     timer:null,
     habits:{ screenTime:{enabled:true,target:3}, sleep:{enabled:false,target:8}, focus:{enabled:false,target:2},
              workout:{enabled:false,target:30}, read:{enabled:false,target:20}, water:{enabled:false,target:8} },
@@ -93,6 +93,7 @@ function load(){
   state.pet.energy = Math.max(0, Math.min(1, state.pet.energy));
   if(typeof state.pet.name!=='string' || !state.pet.name) state.pet.name='Lupo';
   if(typeof state.pet.lastUpdated!=='string') state.pet.lastUpdated=new Date().toISOString();
+  if(typeof state.pet.lastScoredDay!=='string' || !/^\d{4}-\d\d-\d\d$/.test(state.pet.lastScoredDay)) state.pet.lastScoredDay = dateKey(startOfDay(new Date(state.pet.lastUpdated)));
   if(state.timer && (typeof state.timer.dur!=='number' || typeof state.timer.start!=='number' || !HABITS[state.timer.key])) state.timer=null;
   if(typeof state.sound!=='boolean') state.sound=true;
   if(typeof state.tutorialSeen!=='boolean') state.tutorialSeen=false;
@@ -109,7 +110,7 @@ function todayKey(){ return dateKey(new Date()); }
 // ── Habit helpers ──
 function enabledHabits(){ return HABIT_ORDER.filter(k => state.habits[k].enabled); }
 function ensureLog(key){
-  if(!state.logs[key]){ const e={}; enabledHabits().forEach(h=>e[h]=false); state.logs[key]=e; }
+  if(!state.logs[key]){ const e={}; if(key===todayKey()){ enabledHabits().forEach(h=>e[h]=false); } state.logs[key]=e; }
   if(key===todayKey()){ enabledHabits().forEach(h=>{ if(!(h in state.logs[key])) state.logs[key][h]=false; }); }
   return state.logs[key];
 }
@@ -128,24 +129,26 @@ function logAllEnabledDone(entry){ const keys=logKeys(entry); return keys.length
 function moodForEnergy(e){ if(e>=0.75)return'thriving'; if(e>=0.5)return'good'; if(e>=0.35)return'neutral'; if(e>=0.2)return'disappointed'; return'struggling'; }
 const levelOf = () => state.pet.consistentDays;
 
+function parseDayKey(k){ const p=String(k||'').split('-'); const d=new Date(+p[0],(+p[1]||1)-1,(+p[2]||1)); return isNaN(d.getTime())?startOfDay(new Date()):d; }
 function checkForNewDay(){
   if(!state.onboarded) return;
   const today = startOfDay(new Date());
-  let cursor = startOfDay(new Date(state.pet.lastUpdated));
-  if(cursor >= today) return;
+  let cursor = addDays(parseDayKey(state.pet.lastScoredDay), 1);
+  if(cursor > today) cursor = new Date(today); // clock moved backward; nothing new to score
   const prevTier = state.pet.tierIdx;
   while(cursor < today){
     const dk = dateKey(cursor);
-    state.pet.totalDaysTracked += 1;
-    if(state.creditedDays.indexOf(dk) !== -1){
-      // success already credited live on that day; do not re-count
-    } else if(logAllRequiredDone(state.logs[dk])){
-      state.pet.consistentDays += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
-      state.creditedDays.push(dk);
-    } else {
-      state.pet.missedDaysStreak += 1; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
-      if(state.pet.missedDaysStreak >= 3) state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 2);
+    if(state.creditedDays.indexOf(dk) === -1){ // not already credited live that day
+      state.pet.totalDaysTracked += 1;
+      if(logAllRequiredDone(state.logs[dk])){
+        state.pet.consistentDays += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
+        state.creditedDays.push(dk);
+      } else {
+        state.pet.missedDaysStreak += 1; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
+        if(state.pet.missedDaysStreak >= 3) state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 2);
+      }
     }
+    state.pet.lastScoredDay = dk;
     cursor = addDays(cursor,1);
   }
   state.pet.mood = moodForEnergy(state.pet.energy);
@@ -153,7 +156,9 @@ function checkForNewDay(){
   state.pet.tierIdx = tierIdx(levelOf());
   state.pet.lastUpdated = new Date().toISOString();
   ensureLog(todayKey());
-  if(state.creditedDays.length > 60) state.creditedDays = state.creditedDays.slice(-60);
+  if(state.creditedDays.length > 120) state.creditedDays = state.creditedDays.slice(-120);
+  const cut = dateKey(addDays(today, -90));
+  Object.keys(state.logs).forEach(k=>{ if(k < cut) delete state.logs[k]; });
   if(state.pet.tierIdx > prevTier) pendingStageUp = true;
   save();
 }
@@ -165,6 +170,7 @@ function maybeCreditToday(){
   const prevTier = state.pet.tierIdx;
   state.creditedDays.push(tk);
   state.pet.consistentDays += 1;
+  state.pet.totalDaysTracked += 1;
   state.pet.missedDaysStreak = 0;
   state.pet.energy = Math.min(1, state.pet.energy + 0.2);
   state.pet.mood = moodForEnergy(state.pet.energy);
@@ -174,8 +180,9 @@ function maybeCreditToday(){
   save();
   if(!screens.home.hidden) renderHome();
   if(!screens.journey.hidden) renderJourney();
-  if(state.pet.tierIdx > prevTier){ pendingStageUp=false; showStageUp(); }
-  return true;
+  const leveled = state.pet.tierIdx > prevTier;
+  if(leveled){ pendingStageUp=false; showStageUp(); }
+  return leveled; // true only when a NEW FORM overlay was shown (so callers suppress the day-complete popup)
 }
 function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mood=moodForEnergy(state.pet.energy); save(); }
 
@@ -189,9 +196,9 @@ function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const h=Math.floo
   return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(sec).padStart(2,'0'); }
 let tickStarted=false;
 function startTick(){ if(tickStarted) return; tickStarted=true; setInterval(()=>{
-  if(!state || !state.timer) return;
+  if(document.hidden || !state || !state.timer) return;
   const done=checkTimer();
-  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); maybeCreditToday(); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); maybeDayComplete(); return; }
+  if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); const leveled=maybeCreditToday(); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); if(!leveled) maybeDayComplete(); return; }
   const left=fmtClock(timerLeftMs()), off=String((1-timerFrac())*(2*Math.PI*26));
   document.querySelectorAll('[data-timer-clock]').forEach(el=> el.textContent=left);
   document.querySelectorAll('[data-timer-ring]').forEach(el=> el.style.strokeDashoffset=off);
@@ -226,8 +233,9 @@ function handleWolfUpload(file, band){
   };
   r.readAsDataURL(file);
 }
+function reduceMotion(){ try{ return matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
 function sparkBurst(el){
-  if(!el) return; const r=el.getBoundingClientRect(); const host=document.getElementById('app'); if(!host) return;
+  if(!el || reduceMotion()) return; const r=el.getBoundingClientRect(); const host=document.getElementById('app'); if(!host) return;
   const cx=r.left+r.width/2, cy=r.top+r.height/2;
   for(let i=0;i<9;i++){ const s=document.createElement('div'); s.className='spark'; s.textContent=i%2?'✦':'★';
     s.style.left=cx+'px'; s.style.top=cy+'px'; host.appendChild(s);
@@ -241,6 +249,7 @@ function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.get
 function petWolf(){
   celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
   sparkBurst(document.querySelector('#wolfHome .wolf-cut'));
+  if(reduceMotion()) return;
   const card=document.querySelector('.wolf-card'); if(!card) return;
   const glyphs=['♥','✦','★','♥'];
   for(let i=0;i<4;i++){ const h=document.createElement('div'); h.className='pet-heart'; h.textContent=glyphs[i];
@@ -345,8 +354,9 @@ function toggleAndRefresh(k,card){
   if(isDone){ if(window.Sound) Sound.check(); sparkBurst(card.querySelector('.habit-check')); }
   const p=card.querySelector('.timer-pill'); if(p) p.style.display=isDone?'none':'';
   haptic(nowAll&&!wasAll?[12,40,18]:12);
-  if(nowAll&&!wasAll){ celebrateWolf('wolfHome'); maybeCreditToday(); }
-  maybeDayComplete();
+  let leveled=false;
+  if(nowAll&&!wasAll){ celebrateWolf('wolfHome'); leveled = maybeCreditToday(); }
+  if(!leveled) maybeDayComplete();
   updateHabitCompletion(false);
 }
 function renderTimerBanner(elId){
@@ -511,6 +521,7 @@ document.getElementById('resetBtn').addEventListener('click',()=>{
 //  STAGE / FORM UP
 // ═══════════════════════════════════════════════════════
 function burstConfetti(host){
+  if(reduceMotion()) return;
   const colors=['#F5A623','#FFCB45','#F3E9D8','#22C55E','#fff'];
   for(let i=0;i<30;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.background=colors[i%colors.length]; host.appendChild(c);
     const ang=Math.random()*Math.PI*2, dist=80+Math.random()*170;
@@ -615,7 +626,8 @@ function enterApp(){
   else if(!state.tutorialSeen){ showTutorial(); }
 }
 // the wolf fidgets on its own so it always feels alive
-setInterval(()=>{ if(!state || screens.home.hidden) return; const cut=document.querySelector('#wolfHome .wolf-cut'); if(cut && Math.random()<0.6){ cut.classList.remove('pet'); void cut.offsetWidth; cut.classList.add('pet'); setTimeout(()=>cut.classList.remove('pet'),650); } }, 8000);
+setInterval(()=>{ if(!state || document.hidden || screens.home.hidden || reduceMotion()) return; const cut=document.querySelector('#wolfHome .wolf-cut'); if(cut && Math.random()<0.6){ cut.classList.remove('pet'); void cut.offsetWidth; cut.classList.add('pet'); setTimeout(()=>cut.classList.remove('pet'),650); } }, 8000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && state && state.onboarded){ checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); if(!screens.home.hidden) renderHome(); } });
 function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick();
   if(!state.onboarded){ startOnboarding(); }
   else { checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); enterApp(); } }
