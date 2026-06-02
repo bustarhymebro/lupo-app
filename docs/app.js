@@ -240,6 +240,7 @@ function sceneStars(){ const pos=[[16,20],[38,12],[66,16],[82,28],[26,38],[58,32
 function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src; if(el.dataset.w===key) return; el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}<div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
 function petWolf(){
   celebrateWolf('wolfHome'); haptic(14); if(window.Sound) Sound.tap();
+  sparkBurst(document.querySelector('#wolfHome .wolf-cut'));
   const card=document.querySelector('.wolf-card'); if(!card) return;
   const glyphs=['♥','✦','★','♥'];
   for(let i=0;i<4;i++){ const h=document.createElement('div'); h.className='pet-heart'; h.textContent=glyphs[i];
@@ -613,6 +614,8 @@ function enterApp(){
   if(pendingStageUp){ pendingStageUp=false; showStageUp(); }
   else if(!state.tutorialSeen){ showTutorial(); }
 }
+// the wolf fidgets on its own so it always feels alive
+setInterval(()=>{ if(!state || screens.home.hidden) return; const cut=document.querySelector('#wolfHome .wolf-cut'); if(cut && Math.random()<0.6){ cut.classList.remove('pet'); void cut.offsetWidth; cut.classList.add('pet'); setTimeout(()=>cut.classList.remove('pet'),650); } }, 8000);
 function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick();
   if(!state.onboarded){ startOnboarding(); }
   else { checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); enterApp(); } }
