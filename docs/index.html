@@ -41,10 +41,10 @@
 
   <!-- ════════ ONBOARDING ════════ -->
   <section class="screen onboarding" id="screen-onboarding" hidden>
-    <div class="ob-progress">
-      <span class="ob-dot" data-d="0"></span>
-      <span class="ob-dot" data-d="1"></span>
-      <span class="ob-dot" data-d="2"></span>
+    <div class="ob-progress" role="group" aria-label="Setup progress">
+      <span class="ob-dot" data-d="0" aria-hidden="true"></span>
+      <span class="ob-dot" data-d="1" aria-hidden="true"></span>
+      <span class="ob-dot" data-d="2" aria-hidden="true"></span>
     </div>
     <button class="ob-skip" id="obSkip" type="button">Skip</button>
 
@@ -65,7 +65,7 @@
       </div>
       <h1 class="ob-title">Name your pup.</h1>
       <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
-      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Wolf name">
+      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Wolf name" enterkeyhint="next">
       <div class="ob-hint" id="nameHint" hidden>Give your wolf a name to continue.</div>
     </div>
 
@@ -280,7 +280,7 @@
   <!-- DAY COMPLETE OVERLAY -->
   <div class="stageup" id="dayComplete" hidden>
     <div class="stageup-inner">
-      <div class="oc-emoji">🎉</div>
+      <div class="oc-emoji" aria-hidden="true">🎉</div>
       <div class="stageup-kicker" style="font-size:34px;letter-spacing:3px;">GOOD JOB</div>
       <div class="oc-title" id="dayCompleteMsg">Day complete.</div>
       <div class="stageup-tag" id="dayCompleteSub">Your wolf grew today.</div>

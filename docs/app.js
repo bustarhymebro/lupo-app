@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '37'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '38'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -178,7 +178,6 @@ function checkForNewDay(){
   if(cursor >= today) return; // nothing new to score; don't touch state or storage
   const MAX_CATCHUP = 400; // a corrupt/forward-jumped lastScoredDay must never spin the boot loop hundreds of thousands of times
   if((today - cursor) > MAX_CATCHUP*86400000) cursor = addDays(today, -MAX_CATCHUP);
-  const prevTier = state.pet.tierIdx;
   // Snapshot so the whole scoring pass is all-or-nothing: if the write fails we roll back
   // and retry next launch instead of re-applying missed-day penalties every boot.
   const snap = { pet: Object.assign({}, state.pet), credited: state.creditedDays.slice() };
@@ -333,8 +332,8 @@ function sparkBurst(el){
     setTimeout(()=>s.remove(),980); }
 }
 function celebrateWolf(id){ const el=document.getElementById(id); if(!el)return; const cut=el.querySelector('.wolf-cut'); const t=cut||el; const cls=cut?'pet':'pop'; t.classList.remove('pet','pop'); void t.offsetWidth; t.classList.add(cls); setTimeout(()=>t.classList.remove('pet','pop'),700); }
-function sceneStars(){ const pos=[[16,20],[38,12],[66,16],[82,28],[26,38],[58,32],[74,46]]; return pos.map(([l,t])=>`<span class="scene-star" style="left:${l}%;top:${t}%;animation-delay:${((l%5)*0.4).toFixed(1)}s"></span>`).join(''); }
-function sceneMotes(){ const pos=[[28,66],[46,74],[62,62],[72,80],[34,84],[56,88]]; return pos.map(([l,t],k)=>`<span class="mote" style="left:${l}%;top:${t}%;animation-delay:${(k*2.7).toFixed(1)}s"></span>`).join(''); }
+function sceneStars(){ const pos=[[16,20],[66,16],[26,38],[74,46]]; return pos.map(([l,t])=>`<span class="scene-star" style="left:${l}%;top:${t}%;animation-delay:${((l%5)*0.4).toFixed(1)}s"></span>`).join(''); }
+function sceneMotes(){ const pos=[[28,66],[62,62],[56,88]]; return pos.map(([l,t],k)=>`<span class="mote" style="left:${l}%;top:${t}%;animation-delay:${(k*2.7).toFixed(1)}s"></span>`).join(''); }
 function drawWolfScene(idOrEl,i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el)return; const src=wolfImg(i); const key='s:'+src;
   if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML=`<div class="scene"><div class="scene-moon"></div>${sceneStars()}${sceneMotes()}<div class="scene-ridge back"></div><div class="scene-ridge"></div><div class="scene-ground"></div><img class="wolf-cut" src="${src}" alt="Lupo"></div>`; }
   const sc=el.querySelector('.scene'); if(sc){ sc.dataset.tod=todBucket(); if(state&&state.pet&&state.pet.mood) sc.dataset.mood=state.pet.mood; } }
@@ -351,12 +350,13 @@ function petWolf(){
 
 function switchScreen(name){
   SCREENS.forEach(s => screens[s].hidden = (s!==name));
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.screen===name));
+  document.querySelectorAll('.tab').forEach(t => { const on=t.dataset.screen===name; t.classList.toggle('active', on); if(on) t.setAttribute('aria-current','page'); else t.removeAttribute('aria-current'); });
   haptic(8);
   RENDER[name]();
   playEnter(screens[name]);
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchScreen(t.dataset.screen)));
+{ const nav=document.querySelector('.tab-bar'); if(nav) nav.setAttribute('aria-label','Primary'); document.querySelectorAll('.tab .tab-ico').forEach(s=>s.setAttribute('aria-hidden','true')); }
 
 // real-world time of day shifts the sky tint (stays in the navy family)
 function todBucket(){ const h=new Date().getHours(); if(h<5)return'night'; if(h<8)return'dawn'; if(h<17)return'day'; if(h<20)return'dusk'; return'night'; }
@@ -574,7 +574,7 @@ function renderProfile(){
   if(as){ as.innerHTML='';
     for(let b=0;b<5;b++){ const art=state.wolfArt && state.wolfArt[b];
       const slot=document.createElement('label'); slot.className='art-slot'+(art?' filled':'');
-      slot.innerHTML=(art?`<img src="${art}" alt="">`:`<div class="as-plus">+</div>`)+`<div class="as-lbl">${ART_LABELS[b].toUpperCase()}</div><input type="file" accept="image/*" hidden>`;
+      slot.innerHTML=(art?`<img src="${art}" alt="">`:`<div class="as-plus" aria-hidden="true">+</div>`)+`<div class="as-lbl">${ART_LABELS[b].toUpperCase()}</div><input type="file" accept="image/*" hidden aria-label="Upload art for the ${ART_LABELS[b]} stage">`;
       slot.querySelector('input').addEventListener('change',e=>{ const f=e.target.files&&e.target.files[0]; if(f) handleWolfUpload(f,b); });
       as.appendChild(slot);
     }

@@ -24,7 +24,7 @@
 :root{--navy:#0E1320;--navy2:#070A12;--card:#19202F;--gold:#F5B544;--gold2:#FFD37A;--cream:#F0E9DA;--gray:#9AA3B5;--border:rgba(255,255,255,.08);}
 html,body{min-height:100%;}
 body{background:radial-gradient(120% 70% at 50% -10%,rgba(245,181,68,.10),transparent 55%),var(--navy);
-  color:#EEF1F8;font-family:'Onest',-apple-system,system-ui,sans-serif;min-height:100vh;
+  color:#EEF1F8;font-family:'Onest',-apple-system,system-ui,sans-serif;min-height:100vh;min-height:100dvh;
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 22px;text-align:center;}
 .wrap{width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:18px;animation:rise .6s cubic-bezier(.22,.61,.36,1);}
 @keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
@@ -62,7 +62,7 @@ form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
     <p class="sub">A wolf you raise in real life. Stay under your screen-time limit and keep your habits. He grows from pup to legend. Slip, and he fades. Not an app. A standard.</p>
 
     <form id="form" novalidate>
-      <input class="email" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" required>
+      <input class="email" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" required aria-label="Email address">
       <button class="btn" id="btn" type="submit">JOIN THE PACK →</button>
       <div class="proof"><span class="dot"></span><span id="proof">Be one of the first 100 to get in.</span></div>
     </form>
