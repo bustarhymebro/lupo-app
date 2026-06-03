@@ -150,6 +150,10 @@ canvas{display:block;}
 .ht-step{width:30px;height:30px;border-radius:9px;background:var(--card3);border:1px solid var(--gray3);color:var(--gold);font-size:17px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;}
 .ht-step:active{transform:scale(.88);}
 .ht-val{font-size:13px;color:var(--cream);min-width:96px;}
+.count-ctl{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.cup-step{width:32px;height:32px;border-radius:9px;background:var(--gold-dim);border:1px solid rgba(245,181,68,.4);color:var(--gold);font-size:18px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;}
+.cup-step:active{transform:scale(.88);}
+.cup-n{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--gold);min-width:40px;text-align:center;}
 
 /* ─────────── page heads ─────────── */
 .page-head{padding:calc(var(--safe-top) + 22px) 22px 18px;}

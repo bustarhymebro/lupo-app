@@ -45,7 +45,7 @@ const HABITS = {
   focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:0.5, max:8,   step:0.5, label:t=>`${fmtT(t,'h')} off your phone` },
   workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:10,  max:120, step:5,   label:t=>`${fmtT(t,'m')} active` },
   read:      { name:'Read',             icon:'📖', required:false, kind:'timer', def:20, unit:'m', min:5,   max:120, step:5,   label:t=>`${fmtT(t,'m')} reading` },
-  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'check', def:8,  unit:'cups', min:1, max:16, step:1,   label:()=>'Drink enough water' },
+  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'count', def:8,  unit:'cups', min:1, max:16, step:1,   label:t=>`${t} cups` },
 };
 const HABIT_ORDER = ['screenTime','sleep','focus','workout','read','water'];
 function habitTarget(k){ const h=state.habits[k]; return (h && h.target!=null) ? h.target : HABITS[k].def; }
@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '40'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '41'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -421,15 +421,19 @@ function renderHabits(){
   const entry = ensureLog(todayKey());
   const list = document.getElementById('habitList'); list.innerHTML='';
   enabledHabits().forEach(k=>{
-    const h=HABITS[k], done=entry[k]===true, isTimer=h.kind==='timer';
+    const h=HABITS[k], isTimer=h.kind==='timer', isCount=h.kind==='count';
+    const cups = entry[k+'_n']||0;
+    const done = isCount ? (cups>=habitTarget(k)) : entry[k]===true;
     const activeForThis = state.timer && state.timer.key===k;
     const card=document.createElement('div'); card.className='habit-card'+(done?' done':'')+(activeForThis?' running':'');
     let pill='';
     if(isTimer){
       if(activeForThis) pill=`<button class="timer-pill stop" data-act="cancel"><span data-timer-clock>${fmtClock(timerLeftMs())}</span></button>`;
       else pill=`<button class="timer-pill" data-act="start" ${done?'style="display:none"':''}>▶ Start</button>`;
+    } else if(isCount){
+      pill=`<div class="count-ctl"><button class="cup-step" data-c="-1" type="button" aria-label="Remove a cup">–</button><span class="cup-n">${cups}/${habitTarget(k)}</span><button class="cup-step" data-c="1" type="button" aria-label="Add a cup">+</button></div>`;
     }
-    const adjustable = h.kind!=='check'; // sleep / focus / workout / read / screen time all have a number you can tune
+    const adjustable = isTimer || h.kind==='limit'; // sleep / focus / workout / read / screen time have a goal you can tune (water uses its own cup counter)
     const targetInner = adjustable
       ? `<button class="ht-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ht-val">${habitLabel(k)}</span><button class="ht-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button>`
       : habitLabel(k);
@@ -437,7 +441,13 @@ function renderHabits(){
       <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target${adjustable?' adj':''}">${targetInner}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
       ${pill}
       <div class="habit-check ${done?'checked':''}"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
-    ['.habit-card-body','.habit-card-ico','.habit-check'].forEach(sel=>{ const n=card.querySelector(sel); if(n) n.addEventListener('click',()=>toggleAndRefresh(k,card)); });
+    if(isCount){
+      const t=habitTarget(k);
+      card.querySelector('.habit-check').addEventListener('click',()=> adjustCount(k, (cups>=t ? -t : t-cups)));
+      card.querySelectorAll('.cup-step').forEach(b=> b.addEventListener('click',(ev)=>{ ev.stopPropagation(); adjustCount(k,+b.dataset.c); }));
+    } else {
+      ['.habit-card-body','.habit-card-ico','.habit-check'].forEach(sel=>{ const n=card.querySelector(sel); if(n) n.addEventListener('click',()=>toggleAndRefresh(k,card)); });
+    }
     card.querySelectorAll('.ht-step').forEach(b=> b.addEventListener('click',(ev)=>{ ev.stopPropagation(); adjustTarget(k,+b.dataset.d); haptic(8); renderHabits(); }));
     const p=card.querySelector('.timer-pill');
     if(p) p.addEventListener('click',(ev)=>{ ev.stopPropagation();
@@ -464,6 +474,22 @@ function toggleAndRefresh(k,card){
   else if(!nowAll&&wasAll){ uncreditToday(); }
   if(!leveled) maybeDayComplete();
   updateHabitCompletion(false);
+}
+// counting habits (water): each tap adds or removes a cup toward the goal; done when the goal is met
+function adjustCount(k, delta){
+  const e=ensureLog(todayKey()); const t=habitTarget(k);
+  const wasAllReq=logAllRequiredDone(e), wasDone=e[k]===true;
+  const n=Math.max(0, Math.min(t, (e[k+'_n']||0)+delta));
+  e[k+'_n']=n; e[k]= n>=t;
+  state.pet.mood=moodForEnergy(state.pet.energy); save();
+  if(e[k] && !wasDone && window.Sound) Sound.check();
+  haptic(10);
+  renderHabits();
+  let leveled=false;
+  const e2=ensureLog(todayKey()), nowAllReq=logAllRequiredDone(e2);
+  if(nowAllReq && !wasAllReq){ celebrateWolf('wolfHome'); leveled=maybeCreditToday(); }
+  else if(!nowAllReq && wasAllReq){ uncreditToday(); }
+  if(!leveled) maybeDayComplete();
 }
 function renderTimerBanner(elId){
   const el=document.getElementById(elId); if(!el) return;
