@@ -16,7 +16,7 @@ const TIERS = [
 function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k].at) i=k; } return i; }
 const PAINTED=['assets/wolf/painted-cut-0.png','assets/wolf/painted-cut-1.png','assets/wolf/painted-cut-2.png','assets/wolf/painted-cut-3.png','assets/wolf/painted-cut-4.png'];
 function wolfImg(i){ i=Math.max(0,Math.min(4, i|0)); return (state && state.wolfArt && state.wolfArt[i]) || PAINTED[i]; }
-function drawWolf(idOrEl, i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el) return; const src=wolfImg(i); const key='w:'+src; if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+src+'" alt="Lupo">'; } }
+function drawWolf(idOrEl, i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el) return; const src=wolfImg(i); const key='w:'+src; if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+src+'" alt="" aria-hidden="true">'; } }
 
 // 5 maturity bands drive mood flavor (reuse of the original tone)
 const BAND_TAG = [
@@ -44,7 +44,7 @@ const HABITS = {
   focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:0.5, max:8,   step:0.5, label:t=>`${fmtT(t,'h')} off your phone` },
   workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:10,  max:120, step:5,   label:t=>`${fmtT(t,'m')} active` },
   read:      { name:'Read',             icon:'📖', required:false, kind:'timer', def:20, unit:'m', min:5,   max:120, step:5,   label:t=>`${fmtT(t,'m')} reading` },
-  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'check', def:8,  unit:'cups', min:1, max:16, step:1,   label:t=>`${t} cups` },
+  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'check', def:8,  unit:'cups', min:1, max:16, step:1,   label:()=>'Drink enough water' },
 };
 const HABIT_ORDER = ['screenTime','sleep','focus','workout','read','water'];
 function habitTarget(k){ const h=state.habits[k]; return (h && h.target!=null) ? h.target : HABITS[k].def; }
@@ -54,7 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '28'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '31'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -240,6 +240,7 @@ function uncreditToday(){
   state.pet.mood = moodForEnergy(state.pet.energy);
   state.pet.stage = band(levelOf());
   state.pet.tierIdx = tierIdx(levelOf());
+  if(state.pet.maxTierIdx > state.pet.tierIdx) state.pet.maxTierIdx = state.pet.tierIdx; // unchecking the credit that earned a form lets it re-celebrate on re-complete
   state.pet.lastUpdated = new Date().toISOString();
   if(state.lastCelebratedDay===tk) state.lastCelebratedDay=null; // let the "good job" popup fire again if they re-complete
   save();
@@ -250,11 +251,11 @@ function uncreditToday(){
 function toggleHabit(k){ const e=ensureLog(todayKey()); e[k]=!e[k]; state.pet.mood=moodForEnergy(state.pet.energy); save(); }
 
 // ── Timer (Forest-style countdown; persists via timestamps) ──
-function startTimer(k){ state.timer={key:k,start:Date.now(),dur:targetMs(k)}; save(); }
+function startTimer(k){ state.timer={key:k,start:Date.now(),dur:targetMs(k),day:todayKey()}; save(); }
 function cancelTimer(){ state.timer=null; save(); }
 function timerLeftMs(){ if(!state.timer || !Number.isFinite(state.timer.dur) || !Number.isFinite(state.timer.start)) return 0; return Math.max(0, state.timer.dur-(Date.now()-state.timer.start)); }
 function timerFrac(){ if(!state.timer || !Number.isFinite(state.timer.dur) || state.timer.dur<=0) return 0; return Math.min(1,(Date.now()-state.timer.start)/state.timer.dur); }
-function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; const day=todayKey(); ensureLog(day)[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
+function checkTimer(){ if(state.timer && timerLeftMs()<=0){ const k=state.timer.key; const day=state.timer.day||todayKey(); const e=state.logs[day]||(state.logs[day]={}); e[k]=true; state.timer=null; state.pet.mood=moodForEnergy(state.pet.energy); save(); return k; } return null; }
 function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
   return (h?h+':'+String(m).padStart(2,'0'):String(m))+':'+String(sec).padStart(2,'0'); }
 let tickStarted=false;
@@ -352,6 +353,7 @@ function renderHome(){
   document.getElementById('homeName').textContent = p.name.toUpperCase();
   document.getElementById('homeDate').textContent = fmtDate(new Date());
   document.getElementById('streakCount').textContent = p.currentStreak;
+  { const sb=document.getElementById('streakBadge'); if(sb) sb.setAttribute('aria-label', p.currentStreak + ' day streak'); }
   document.getElementById('moodMsg').textContent = '"' + (STAGE_MOOD_MSG[b][p.mood] || '') + '"';
   renderTimerBanner('homeTimer');
   drawWolfScene('wolfHome', tierIdx(lvl));
@@ -378,7 +380,7 @@ function renderHome(){
 
   const entry = ensureLog(todayKey());
   const quick = document.getElementById('quickRow'); quick.innerHTML='';
-  enabledHabits().slice(0,5).forEach(k=>{ const done=entry[k]===true; const it=document.createElement('div'); it.className='quick-item';
+  enabledHabits().slice(0,6).forEach(k=>{ const done=entry[k]===true; const it=document.createElement('div'); it.className='quick-item';
     it.innerHTML=`<div class="quick-ico ${done?'done':''}">${HABITS[k].icon}</div><div class="quick-dot ${done?'done':''}"></div>`; quick.appendChild(it); });
 
   const cta = document.getElementById('homeCta');
@@ -471,14 +473,15 @@ function renderJourney(){
     document.getElementById('journeyNextVal').textContent=tp.daysLeft+'d';
     requestAnimationFrame(()=> document.getElementById('journeyFill').style.width=(tp.frac*100)+'%');
   }
-  const list=document.getElementById('tierList'); list.innerHTML=''; list.classList.add('path');
+  const list=document.getElementById('tierList'); list.innerHTML=''; list.classList.add('path'); list.setAttribute('role','list');
   TIERS.forEach((t,i)=>{
     const reached=lvl>=t.at, current=i===tp.idx;
-    const row=document.createElement('div'); row.className='path-row '+(i%2?'right':'left');
+    const row=document.createElement('div'); row.className='path-row '+(i%2?'right':'left'); row.setAttribute('role','listitem');
     const cls='path-node'+(current?' current':'')+(reached?' reached':' locked');
-    row.innerHTML=`<div class="${cls}">
+    const aria=t.name+(reached?', unlocked':', locked, unlocks at level '+(t.at+1))+(current?', current form':'');
+    row.innerHTML=`<div class="${cls}" role="group" aria-label="${aria}">
         ${current?'<span class="node-you">YOU</span>':''}
-        <div class="node-disc"><div class="node-wolf"></div>${reached?'':'<div class="node-lock">🔒</div>'}</div>
+        <div class="node-disc"><div class="node-wolf"></div>${reached?'':'<div class="node-lock" aria-hidden="true">🔒</div>'}</div>
         <div class="node-name">${t.name}</div>
         <div class="node-lvl">${reached?'UNLOCKED':'LV '+(t.at+1)}</div>
       </div>`;
@@ -492,38 +495,49 @@ function renderJourney(){
 // ═══════════════════════════════════════════════════════
 //  STATS
 // ═══════════════════════════════════════════════════════
-function overallCompletion(){ const keys=Object.keys(state.logs).filter(k=>k!==todayKey()); if(!keys.length)return 0;
-  return keys.reduce((a,k)=>a+logCompletionRate(state.logs[k]),0)/keys.length; }
+// a day "has data" only once at least one habit was actually completed; an untouched (all-false) today does not count
+function dayHasData(k){ const e=state.logs[k]; return !!e && logKeys(e).some(h=>e[h]===true); }
+// average completion over days with real data; an untouched today is excluded so a perfect record never drops at midnight. null = nothing to show yet.
+function overallCompletion(){
+  const tk=todayKey();
+  const keys=Object.keys(state.logs).filter(k=>{ const e=state.logs[k]; if(!logKeys(e).length) return false; if(k===tk && logCompletionRate(e)===0) return false; return true; });
+  if(!keys.length) return null;
+  return keys.reduce((a,k)=>a+logCompletionRate(state.logs[k]),0)/keys.length;
+}
 function renderStats(){
   const p=state.pet, oc=overallCompletion(), lvl=levelOf(), tp=tierProgress();
   const grid=document.getElementById('statGrid');
+  const compTo = oc===null ? '—' : Math.round(oc*100);
   const cards=[
     {ico:'📅',label:'TOTAL DAYS',to:p.totalDaysTracked,suffix:'',color:'#fff'},
     {ico:'🔥',label:'STREAK',to:p.currentStreak,suffix:'',color:'#F5A623'},
     {ico:'⭐',label:'LEVEL',to:displayLevel(),suffix:'',sub:tp.cur.name.toUpperCase(),color:'#F5A623'},
-    {ico:'✓',label:'COMPLETION',to:Math.round(oc*100),suffix:'%',color:oc>0.7?'#22C55E':'#F5A623'},
+    {ico:'✓',label:'COMPLETION',to:compTo,suffix:(oc===null?'':'%'),color:(oc!==null&&oc>0.7)?'#22C55E':'#F5A623'},
   ];
-  grid.innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-card-head"><span class="stat-card-ico">${c.ico}</span><span class="stat-card-label">${c.label}</span></div><div class="stat-card-val" data-to="${c.to}" data-suffix="${c.suffix}" style="color:${c.color}">0${c.suffix}</div>${c.sub?`<div class="stat-card-sub">${c.sub}</div>`:''}</div>`).join('');
+  grid.innerHTML=cards.map(c=>`<div class="stat-card"><div class="stat-card-head"><span class="stat-card-ico">${c.ico}</span><span class="stat-card-label">${c.label}</span></div><div class="stat-card-val" data-to="${c.to}" data-suffix="${c.suffix}" style="color:${c.color}">${Number.isFinite(+c.to)?'0'+c.suffix:c.to}</div>${c.sub?`<div class="stat-card-sub">${c.sub}</div>`:''}</div>`).join('');
   stagger([...grid.children]);
-  grid.querySelectorAll('.stat-card-val').forEach((el,i)=>animateNumber(el,+el.dataset.to,700+i*70,el.dataset.suffix));
+  grid.querySelectorAll('.stat-card-val').forEach((el,i)=>{ const to=+el.dataset.to; if(Number.isFinite(to)) animateNumber(el,to,700+i*70,el.dataset.suffix); else el.textContent=el.dataset.to; });
 
   const hm=document.getElementById('heatmap'); hm.innerHTML='';
-  for(let off=13;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const e=state.logs[dateKey(d)]; let color='var(--card3)';
-    if(e){ if(logAllRequiredDone(e))color='rgba(34,197,94,0.75)'; else if(logCompletionRate(e)>0)color='rgba(245,166,35,0.6)'; else color='rgba(239,68,68,0.5)'; }
-    const c=document.createElement('div'); c.className='heat-cell'; c.innerHTML=`<div class="heat-sq" style="background:${color}"></div><div class="heat-d">${d.getDate()}</div>`; hm.appendChild(c); }
+  for(let off=13;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const isToday=off===0; const e=state.logs[dateKey(d)]; let color='var(--card3)';
+    if(e){ if(logAllRequiredDone(e))color='rgba(34,197,94,0.75)'; else if(logCompletionRate(e)>0)color='rgba(245,166,35,0.6)'; else if(!isToday)color='rgba(239,68,68,0.5)'; } // today is never marked failed before it's over
+    const c=document.createElement('div'); c.className='heat-cell'; c.innerHTML=`<div class="heat-sq${isToday?' today':''}" style="background:${color}"></div><div class="heat-d">${d.getDate()}</div>`; hm.appendChild(c); }
   hm.querySelectorAll('.heat-sq').forEach((sq,i)=>setTimeout(()=>sq.classList.add('show'),i*35+50));
 
   const wl=document.getElementById('weekList'); wl.innerHTML=''; const eh=enabledHabits();
-  const priorKeys=Object.keys(state.logs).filter(k=>k!==todayKey());
-  if(p.totalDaysTracked===0 && priorKeys.length===0){
+  const everCompleted=Object.keys(state.logs).some(dayHasData);
+  if(!everCompleted){
     wl.innerHTML=`<div class="week-empty">No history yet. Feed ${p.name} today and your streak starts right here.</div>`;
     return;
   }
-  for(let off=6;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const e=state.logs[dateKey(d)];
+  const created=startOfDay(new Date(state.pet.createdDate||state.pet.lastUpdated||Date.now()));
+  for(let off=6;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); if(d<created) continue; // wolf didn't exist yet
+    const isToday=dateKey(d)===todayKey(); const e=state.logs[dateKey(d)];
     const lbl=d.toLocaleDateString('en-US',{weekday:'short'}).toUpperCase(); const row=document.createElement('div'); row.className='week-row';
     if(!e){ row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-none">NO DATA</div>`; }
     else{ const dots=eh.map(k=>`<div class="week-dot" style="background:${e[k]?'var(--success)':'var(--gray3)'}"></div>`).join('');
-      row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-dots">${dots}</div><div class="week-end">${logAllRequiredDone(e)?'✅':'❌'}</div>`; }
+      const mark=logAllRequiredDone(e)?'✅':(isToday?'·':'❌');
+      row.innerHTML=`<div class="week-day">${lbl}</div><div class="week-dots">${dots}</div><div class="week-end">${mark}</div>`; }
     wl.appendChild(row); }
 }
 
@@ -551,10 +565,12 @@ function renderProfile(){
         <div class="manage-name">${h.name}${locked?' <span class="lock-tag">REQUIRED</span>':''}</div>
         <button class="switch ${on?'on':''}" ${locked?'disabled':''} aria-pressed="${on}" aria-label="${h.name}${locked?' (required, always on)':''}"></button>
       </div>
-      <div class="manage-bot">
+      ${h.kind==='check'
+        ? `<div class="manage-bot"><div class="manage-target">Check it off each day</div></div>`
+        : `<div class="manage-bot">
         <div class="manage-target">${h.kind==='limit'?'Goal · under ':'Goal · '}${targetShort(k)}</div>
         <div class="stepper"><button class="step-btn" data-d="-1" type="button">–</button><span class="step-val">${targetShort(k)}</span><button class="step-btn" data-d="1" type="button">+</button></div>
-      </div>`;
+      </div>`}`;
     row.querySelectorAll('.step-btn').forEach(b=> b.addEventListener('click',()=>{ adjustTarget(k,+b.dataset.d); haptic(8); renderProfile(); }));
     if(!locked) row.querySelector('.switch').addEventListener('click',()=>{ state.habits[k].enabled=!state.habits[k].enabled; ensureLog(todayKey()); save(); haptic(10); renderProfile(); });
     ml.appendChild(row);
