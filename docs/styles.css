@@ -349,7 +349,7 @@ canvas{display:block;}
 /* ─────────── PROFILE ─────────── */
 .info-card{margin:0 20px;padding:16px;border-radius:16px;background:var(--card);border:1px solid var(--border);}
 .field-row{display:flex;gap:10px;align-items:center;}
-.field-input{flex:1;height:46px;background:var(--card3);border:1px solid var(--gray3);border-radius:12px;color:#fff;padding:0 14px;font-size:15px;font-weight:600;outline:none;transition:border-color .2s;}
+.field-input{flex:1;height:46px;background:var(--card3);border:1px solid var(--gray3);border-radius:12px;color:#fff;padding:0 14px;font-size:16px;font-weight:600;outline:none;transition:border-color .2s;}
 .field-input:focus{border-color:var(--gold);}
 .mini-btn{height:42px;padding:0 18px;border-radius:12px;background:var(--gold);color:#0A0A0A;font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:1px;flex-shrink:0;transition:transform .12s;}
 .mini-btn:active{transform:scale(.95);}
@@ -456,6 +456,7 @@ canvas{display:block;}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important;}
   .scene-star,.scene-moon,.wolf-cut,.mote,.scene-ground::after{animation:none!important;}
   .mote{opacity:0!important;}
+  #grain{display:none!important;}
 }
 
 /* ─────────── TIMER ─────────── */

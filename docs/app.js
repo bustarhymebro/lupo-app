@@ -54,7 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '32'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '33'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -222,7 +222,8 @@ function maybeCreditToday(){
   state.pet.stage = band(levelOf());
   state.pet.tierIdx = tierIdx(levelOf());
   const leveled = state.pet.tierIdx > state.pet.maxTierIdx; // only a brand-new form (not a re-climb) celebrates
-  if(leveled) state.pet.maxTierIdx = state.pet.tierIdx;
+  if(leveled){ state.pet._creditPrevMax = state.pet.maxTierIdx; state.pet.maxTierIdx = state.pet.tierIdx; }
+  else { state.pet._creditPrevMax = null; }
   state.pet.lastUpdated = new Date().toISOString();
   save();
   if(!screens.home.hidden) renderHome();
@@ -242,7 +243,7 @@ function uncreditToday(){
   state.pet.mood = moodForEnergy(state.pet.energy);
   state.pet.stage = band(levelOf());
   state.pet.tierIdx = tierIdx(levelOf());
-  if(state.pet.maxTierIdx > state.pet.tierIdx) state.pet.maxTierIdx = state.pet.tierIdx; // unchecking the credit that earned a form lets it re-celebrate on re-complete
+  if(typeof state.pet._creditPrevMax==='number'){ state.pet.maxTierIdx = state.pet._creditPrevMax; state.pet._creditPrevMax = null; } // restore exact pre-credit watermark so only a form earned by today's credit can re-celebrate
   state.pet.lastUpdated = new Date().toISOString();
   if(state.lastCelebratedDay===tk) state.lastCelebratedDay=null; // let the "good job" popup fire again if they re-complete
   save();
@@ -265,6 +266,7 @@ function startTick(){ if(tickStarted) return; tickStarted=true; setInterval(()=>
   if(document.hidden || !state || !state.timer) return;
   const done=checkTimer();
   if(done){ haptic([12,40,18]); celebrateWolf('wolfHome'); const leveled=maybeCreditToday(); if(!screens.habits.hidden) renderHabits(); if(!screens.home.hidden) renderHome(); if(!leveled) maybeDayComplete(); return; }
+  if(screens.home.hidden && screens.habits.hidden) return; // no visible timer banner to update this tick
   const left=fmtClock(timerLeftMs()), off=String((1-timerFrac())*(2*Math.PI*26));
   document.querySelectorAll('[data-timer-clock]').forEach(el=> el.textContent=left);
   document.querySelectorAll('[data-timer-ring]').forEach(el=> el.style.strokeDashoffset=off);
@@ -281,9 +283,10 @@ function haptic(ms){ try{ if(navigator.vibrate && (!navigator.userActivation || 
 function playEnter(el){ el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
 function stagger(nodes, base){ base=base||0; nodes.forEach((k,i)=>{ k.classList.remove('rise'); k.style.animationDelay=(base+i*50)+'ms'; void k.offsetWidth; k.classList.add('rise'); }); }
 function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700;
+  if(el._numRaf){ cancelAnimationFrame(el._numRaf); el._numRaf=null; } // never let two count-ups fight over the same element
   if(reduceMotion()){ el.textContent=Math.round(to)+suffix; return; }
   const s=performance.now();
-  (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1)requestAnimationFrame(tick); })(performance.now()); }
+  (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1) el._numRaf=requestAnimationFrame(tick); else el._numRaf=null; })(performance.now()); }
 function handleWolfUpload(file, band){
   const r=new FileReader();
   r.onload=()=>{ const img=new Image();
@@ -587,7 +590,7 @@ document.getElementById('renameBtn').addEventListener('click',()=>{ const v=docu
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
   haptic(10);
   if(!state.reminders){
-    if(!('Notification' in window)){ alert('This browser does not support notifications.'); return; }
+    if(!('Notification' in window)){ const ios=/iphone|ipad|ipod/i.test(navigator.userAgent); alert(ios ? 'To get reminders on iPhone, add Lupo to your home screen first (tap Share, then Add to Home Screen), then open it from there.' : 'This browser does not support notifications.'); return; }
     let p = Notification.permission;
     if(p !== 'granted') { try { p = await Notification.requestPermission(); } catch(e){ p='denied'; } }
     if(p === 'granted'){
@@ -740,6 +743,8 @@ function buildHabitChooser(){
     list.appendChild(row); });
 }
 document.getElementById('petNameInput').addEventListener('input',()=>{ const empty=document.getElementById('petNameInput').value.trim().length===0; document.getElementById('obNext').disabled=empty; const nh=document.getElementById('nameHint'); if(nh) nh.hidden=!empty; });
+// Enter advances onboarding so the iOS keyboard never hides the CONTINUE button on the name step
+document.getElementById('petNameInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter' && obPage===1 && document.getElementById('petNameInput').value.trim()){ e.preventDefault(); document.getElementById('petNameInput').blur(); document.getElementById('obNext').click(); } });
 document.getElementById('obSkip').addEventListener('click',()=>{ obPage=2; renderOnboarding(); });
 document.getElementById('obNext').addEventListener('click',()=>{ haptic(10); if(obPage<2){ obPage++; renderOnboarding(); return; }
   completeOnboarding(document.getElementById('petNameInput').value.trim()||'Lupo', obSelected); });
@@ -762,7 +767,14 @@ function enterApp(){
 }
 // the wolf fidgets on its own so it always feels alive
 setInterval(()=>{ if(!state || document.hidden || screens.home.hidden || reduceMotion()) return; const cut=document.querySelector('#wolfHome .wolf-cut'); if(cut && Math.random()<0.6){ cut.classList.remove('pet'); void cut.offsetWidth; cut.classList.add('pet'); setTimeout(()=>cut.classList.remove('pet'),650); } }, 8000);
-document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && state && state.onboarded){ checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); if(!screens.home.hidden) renderHome(); if(pendingStageUp && !document.querySelector('.stageup:not([hidden])')){ pendingStageUp=false; showStageUp(); } } });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && state && state.onboarded){
+  const done=checkTimer(); checkForNewDay();
+  if(done){ haptic(12); if(window.Sound) Sound.check(); celebrateWolf('wolfHome'); const leveled=maybeCreditToday(); if(!leveled) maybeDayComplete(); } // a timer that finished while the phone was locked still credits + celebrates on resume
+  if(state.reminders) scheduleReminder();
+  if(!screens.habits.hidden) renderHabits();
+  if(!screens.home.hidden) renderHome();
+  if(pendingStageUp && !document.querySelector('.stageup:not([hidden])')){ pendingStageUp=false; showStageUp(); }
+} });
 function boot(){ load(); if(window.Sound) Sound.on(state.sound); startTick();
   if(!state.onboarded){ startOnboarding(); }
   else { checkTimer(); checkForNewDay(); if(state.reminders) scheduleReminder(); enterApp(); } }
