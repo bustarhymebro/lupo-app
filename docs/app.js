@@ -40,12 +40,12 @@ const band = (lvl) => tierIdx(lvl);
 // kind: 'limit' (stay under, manual confirm) | 'timer' (run a countdown) | 'check' (manual)
 function fmtT(t,u){ if(u==='h'){ const w=Math.floor(t),m=Math.round((t-w)*60); return (w?w+'h':'')+(m?(w?' ':'')+m+'m':(w?'':'0m')); } return t+' min'; }
 const HABITS = {
-  screenTime:{ name:'Screen Time',      icon:'📵', required:true,  kind:'limit', def:3,  unit:'h', min:1,   max:8,   step:0.5, auto:'Auto-verified in the iOS app', label:t=>`Stay under ${fmtT(t,'h')}` },
-  sleep:     { name:'Sleep',            icon:'🌙', required:false, kind:'timer', def:8,  unit:'h', min:4,   max:12,  step:0.5, label:t=>`${fmtT(t,'h')} of sleep` },
-  focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:0.5, max:8,   step:0.5, label:t=>`${fmtT(t,'h')} off your phone` },
-  workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:10,  max:120, step:5,   label:t=>`${fmtT(t,'m')} active` },
+  screenTime:{ name:'Screen Time',      icon:'📵', required:true,  kind:'limit', def:3,  unit:'h', min:1,   max:12,  step:1,   auto:'Auto-verified in the iOS app', label:t=>`Stay under ${fmtT(t,'h')}` },
+  sleep:     { name:'Sleep',            icon:'🌙', required:false, kind:'timer', def:8,  unit:'h', min:1,   max:15,  step:1,   label:t=>`${fmtT(t,'h')} of sleep` },
+  focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:1,   max:8,   step:1,   label:t=>`${fmtT(t,'h')} off your phone` },
+  workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:15,  max:180, step:15,  label:t=>`${fmtT(t,'m')} active` },
   read:      { name:'Read',             icon:'📖', required:false, kind:'timer', def:20, unit:'m', min:5,   max:120, step:5,   label:t=>`${fmtT(t,'m')} reading` },
-  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'count', def:8,  unit:'cups', min:1, max:16, step:1,   label:t=>`${t} cups` },
+  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'count', def:8,  unit:'cups', min:1, max:20, step:1,   label:t=>`${t} cups` },
 };
 const HABIT_ORDER = ['screenTime','sleep','focus','workout','read','water'];
 function habitTarget(k){ const h=state.habits[k]; return (h && h.target!=null) ? h.target : HABITS[k].def; }
@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '45'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '46'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
