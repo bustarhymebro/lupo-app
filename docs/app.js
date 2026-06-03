@@ -54,11 +54,13 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '31'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '32'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
 let pendingStageUp = false;
+// escape user-controlled text (the wolf's name) before it goes into innerHTML, so a name with < > & can't break or inject markup
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function defaultState(){
   return {
@@ -384,8 +386,8 @@ function renderHome(){
     it.innerHTML=`<div class="quick-ico ${done?'done':''}">${HABITS[k].icon}</div><div class="quick-dot ${done?'done':''}"></div>`; quick.appendChild(it); });
 
   const cta = document.getElementById('homeCta');
-  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ All done today. ${p.name} grew stronger.</div>`; }
-  else if(logAllRequiredDone(entry)){ cta.innerHTML = `<div class="cta-done partial">✓ ${p.name} is fed. Finish the rest for a full day.</div>`; }
+  if(logAllEnabledDone(entry)){ cta.innerHTML = `<div class="cta-done">✓ All done today. ${esc(p.name)} grew stronger.</div>`; }
+  else if(logAllRequiredDone(entry)){ cta.innerHTML = `<div class="cta-done partial">✓ ${esc(p.name)} is fed. Finish the rest for a full day.</div>`; }
   else { cta.innerHTML = `<button class="btn-primary cta-log" type="button">LOG TODAY</button>`; cta.querySelector('button').addEventListener('click',()=>switchScreen('habits')); }
 }
 
@@ -527,7 +529,7 @@ function renderStats(){
   const wl=document.getElementById('weekList'); wl.innerHTML=''; const eh=enabledHabits();
   const everCompleted=Object.keys(state.logs).some(dayHasData);
   if(!everCompleted){
-    wl.innerHTML=`<div class="week-empty">No history yet. Feed ${p.name} today and your streak starts right here.</div>`;
+    wl.innerHTML=`<div class="week-empty">No history yet. Feed ${esc(p.name)} today and your streak starts right here.</div>`;
     return;
   }
   const created=startOfDay(new Date(state.pet.createdDate||state.pet.lastUpdated||Date.now()));
