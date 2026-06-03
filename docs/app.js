@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '44'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '45'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -635,6 +635,29 @@ function renderProfile(){
 document.getElementById('soundToggle').addEventListener('click',()=>{ state.sound=!state.sound; if(window.Sound) Sound.on(state.sound); save(); haptic(10); if(state.sound && window.Sound) Sound.tap(); renderProfile(); });
 document.getElementById('clearArtBtn').addEventListener('click',()=>{ state.wolfArt={}; saveArt(); haptic(10); renderProfile(); });
 document.getElementById('renameBtn').addEventListener('click',()=>{ const v=document.getElementById('renameInput').value.trim()||'Lupo'; state.pet.name=v; save(); haptic(12); const b=document.getElementById('renameBtn'); b.textContent='SAVED'; setTimeout(()=>b.textContent='SAVE',1000); });
+// Build a shareable card of the wolf (name, level, streak). Drives the @raiselupo UGC loop.
+async function buildWolfCard(){
+  const W=1080,H=1350, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const c=cv.getContext('2d');
+  const g=c.createLinearGradient(0,0,0,H); g.addColorStop(0,'#1E2748'); g.addColorStop(.5,'#141A2E'); g.addColorStop(1,'#0B0F1C'); c.fillStyle=g; c.fillRect(0,0,W,H);
+  const rg=c.createRadialGradient(W/2,H*0.40,30,W/2,H*0.40,W*0.62); rg.addColorStop(0,'rgba(245,181,68,.30)'); rg.addColorStop(1,'rgba(245,181,68,0)'); c.fillStyle=rg; c.fillRect(0,0,W,H);
+  const p=state.pet, tp=tierProgress();
+  await new Promise((res)=>{ const img=new Image(); img.onload=()=>{ const ih=H*0.50, iw=img.width*ih/img.height; c.drawImage(img,(W-iw)/2,H*0.10,iw,ih); res(); }; img.onerror=res; img.src=wolfImg(tierIdx(levelOf())); });
+  c.textAlign='center';
+  c.fillStyle='#F5B544'; c.font='800 110px "Fredoka", system-ui, sans-serif'; c.fillText((p.name||'Lupo').toUpperCase(), W/2, H*0.70);
+  c.fillStyle='#E7ECFF'; c.font='700 48px "Nunito", system-ui, sans-serif'; c.fillText('LEVEL '+displayLevel()+'   '+tp.cur.name.toUpperCase(), W/2, H*0.765);
+  c.fillStyle='#F5B544'; c.font='800 64px "Nunito", system-ui, sans-serif'; c.fillText('🔥 '+p.currentStreak+' DAY STREAK', W/2, H*0.85);
+  c.fillStyle='rgba(231,236,255,.6)'; c.font='700 38px "Nunito", system-ui, sans-serif'; c.fillText('Raise your wolf   ·   @raiselupo', W/2, H*0.93);
+  return cv;
+}
+async function shareWolf(){
+  const cv=await buildWolfCard();
+  const blob=await new Promise(r=>cv.toBlob(r,'image/png')); if(!blob){ alert('Could not create the image. Try again.'); return; }
+  const file=new File([blob],'my-lupo-wolf.png',{type:'image/png'});
+  try{ if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'My wolf on Lupo', text:'Raising my wolf on Lupo'}); haptic(12); return; } }
+  catch(e){ if(e && e.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='my-lupo-wolf.png'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000); haptic(12);
+}
+document.getElementById('shareBtn').addEventListener('click',()=>{ shareWolf(); });
 document.getElementById('reminderToggle').addEventListener('click',async()=>{
   haptic(10);
   if(!state.reminders){
