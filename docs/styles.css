@@ -144,7 +144,12 @@ canvas{display:block;}
 
 .cta-done{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 18px;padding:18px;border-radius:18px;
   color:var(--gold);font-size:14px;font-weight:700;background:var(--gold-dim);border:1px solid rgba(245,166,35,0.25);}
-.cta-log{margin:0 18px;}
+.cta-log{display:block;width:auto;min-width:200px;max-width:300px;margin:18px auto 0;padding:0 44px;}
+/* inline goal steppers on each habit card so you can tune sleep/focus/workout right where you see them */
+.habit-card-target.adj{display:flex;align-items:center;gap:10px;margin-top:5px;}
+.ht-step{width:30px;height:30px;border-radius:9px;background:var(--card3);border:1px solid var(--gray3);color:var(--gold);font-size:17px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;}
+.ht-step:active{transform:scale(.88);}
+.ht-val{font-size:13px;color:var(--cream);min-width:96px;}
 
 /* ─────────── page heads ─────────── */
 .page-head{padding:calc(var(--safe-top) + 22px) 22px 18px;}
@@ -333,14 +338,15 @@ canvas{display:block;}
 .path-row.left{justify-content:flex-start;padding-left:9%;}
 .path-row.right{justify-content:flex-end;padding-right:9%;}
 .path-node{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;width:122px;}
-.node-disc{width:94px;height:94px;border-radius:50%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;
+.node-disc{width:94px;height:94px;border-radius:50%;position:relative;overflow:visible;display:flex;align-items:center;justify-content:center;
   background:radial-gradient(circle at 50% 30%,rgba(245,181,68,.22),rgba(27,36,56,.96) 72%);
   border:3px solid var(--card3);box-shadow:0 4px 0 #0A1027;}
 .path-node.reached .node-disc{border-color:var(--gold);box-shadow:0 0 16px rgba(245,181,68,.28),0 4px 0 var(--gold-lip);}
 .path-node.current .node-disc{border-color:var(--gold2);animation:nodePulse 2.2s ease-in-out infinite;}
 @keyframes nodePulse{0%,100%{box-shadow:0 0 0 0 rgba(245,181,68,.45),0 4px 0 var(--gold-lip);}70%{box-shadow:0 0 0 14px rgba(245,181,68,0),0 4px 0 var(--gold-lip);}}
 .node-wolf{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
-.node-disc .wolf-photo{width:100%;height:100%;max-width:none;object-fit:contain;padding:7px;border-radius:0;animation:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45));}
+.node-disc .wolf-photo{width:auto;height:auto;max-width:84%;max-height:96%;object-fit:contain;padding:0;border-radius:0;animation:none;filter:drop-shadow(0 3px 5px rgba(0,0,0,.5));}
+.node-lock{border-radius:50%;}
 .node-lock{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(11,15,28,.5);font-size:22px;}
 .node-you{position:absolute;top:-11px;left:50%;transform:translateX(-50%);z-index:2;background:var(--gold);color:#121726;font-family:var(--mono);font-size:8px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:7px;box-shadow:0 2px 0 var(--gold-lip);animation:youBob 2.2s ease-in-out infinite;}
 @keyframes youBob{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(-3px);}}

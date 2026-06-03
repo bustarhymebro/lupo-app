@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '39'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '40'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -429,11 +429,16 @@ function renderHabits(){
       if(activeForThis) pill=`<button class="timer-pill stop" data-act="cancel"><span data-timer-clock>${fmtClock(timerLeftMs())}</span></button>`;
       else pill=`<button class="timer-pill" data-act="start" ${done?'style="display:none"':''}>▶ Start</button>`;
     }
+    const adjustable = h.kind!=='check'; // sleep / focus / workout / read / screen time all have a number you can tune
+    const targetInner = adjustable
+      ? `<button class="ht-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ht-val">${habitLabel(k)}</span><button class="ht-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button>`
+      : habitLabel(k);
     card.innerHTML=`<div class="habit-card-ico">${h.icon}</div>
-      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target">${habitLabel(k)}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
+      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target${adjustable?' adj':''}">${targetInner}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
       ${pill}
       <div class="habit-check ${done?'checked':''}"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
     ['.habit-card-body','.habit-card-ico','.habit-check'].forEach(sel=>{ const n=card.querySelector(sel); if(n) n.addEventListener('click',()=>toggleAndRefresh(k,card)); });
+    card.querySelectorAll('.ht-step').forEach(b=> b.addEventListener('click',(ev)=>{ ev.stopPropagation(); adjustTarget(k,+b.dataset.d); haptic(8); renderHabits(); }));
     const p=card.querySelector('.timer-pill');
     if(p) p.addEventListener('click',(ev)=>{ ev.stopPropagation();
       if(p.dataset.act==='start'){ if(state.timer && !confirm('Another timer is running. Replace it?')) return; startTimer(k); if(window.Sound) Sound.start(); }
