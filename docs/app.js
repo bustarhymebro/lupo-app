@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '42'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '43'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -807,10 +807,13 @@ function renderOnboarding(){
 function buildHabitChooser(){
   const list=document.getElementById('obHabitList'); list.dataset.built='1'; list.innerHTML='';
   HABIT_ORDER.forEach(k=>{ const h=HABITS[k], locked=h.required;
-    const row=document.createElement('button'); row.type='button'; row.className='ob-habit'+(locked?' on locked':'');
-    row.innerHTML=`<div class="ob-habit-ico">${h.icon}</div><div class="ob-habit-body"><div class="ob-habit-name">${h.name}</div><div class="ob-habit-desc">${habitLabel(k)}</div>${locked?'<div class="ob-lock">ALWAYS ON</div>':''}</div>
+    const row=document.createElement('div'); row.className='ob-habit'+(locked?' on locked':'');
+    if(!locked){ row.setAttribute('role','button'); row.setAttribute('tabindex','0'); }
+    row.innerHTML=`<div class="ob-habit-ico">${h.icon}</div><div class="ob-habit-body"><div class="ob-habit-name">${h.name}</div><div class="ob-habit-desc"><button class="ht-step ob-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ob-val">${habitLabel(k)}</span><button class="ht-step ob-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button></div>${locked?'<div class="ob-lock">ALWAYS ON</div>':''}</div>
       <div class="ob-check"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
-    if(!locked) row.addEventListener('click',()=>{ const on=row.classList.toggle('on'); if(on)obSelected.push(k); else obSelected=obSelected.filter(x=>x!==k); haptic(8); });
+    const toggle=()=>{ if(locked) return; const on=row.classList.toggle('on'); if(on)obSelected.push(k); else obSelected=obSelected.filter(x=>x!==k); haptic(8); };
+    if(!locked){ row.addEventListener('click',toggle); row.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); toggle(); } }); }
+    row.querySelectorAll('.ob-step').forEach(b=> b.addEventListener('click',(ev)=>{ ev.stopPropagation(); adjustTarget(k,+b.dataset.d); haptic(8); const span=row.querySelector('.ob-val'); if(span) span.textContent=habitLabel(k); }));
     list.appendChild(row); });
 }
 document.getElementById('petNameInput').addEventListener('input',()=>{ const empty=document.getElementById('petNameInput').value.trim().length===0; document.getElementById('obNext').disabled=empty; const nh=document.getElementById('nameHint'); if(nh) nh.hidden=!empty; });
@@ -820,8 +823,9 @@ document.getElementById('obSkip').addEventListener('click',()=>{ obPage=2; rende
 document.getElementById('obNext').addEventListener('click',()=>{ haptic(10); if(obPage<2){ obPage++; renderOnboarding(); return; }
   completeOnboarding(document.getElementById('petNameInput').value.trim()||'Lupo', obSelected); });
 function completeOnboarding(name, selected){
+  const targets={}; HABIT_ORDER.forEach(k=>{ targets[k]=habitTarget(k); }); // keep any goals tuned during onboarding
   state=defaultState(); state.onboarded=true; state.pet.name=name;
-  HABIT_ORDER.forEach(k=>{ state.habits[k].enabled = HABITS[k].required || selected.includes(k); });
+  HABIT_ORDER.forEach(k=>{ state.habits[k].enabled = HABITS[k].required || selected.includes(k); state.habits[k].target=targets[k]; });
   state.pet.lastUpdated=new Date().toISOString(); state.pet.createdDate=new Date().toISOString();
   state.pet.mood=moodForEnergy(state.pet.energy); // so day one reads "Decent start" not the scolding default
   ensureLog(todayKey()); save(); haptic([12,50,20]); enterApp();

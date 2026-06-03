@@ -69,14 +69,14 @@ canvas{display:block;}
 .btn-ghost:active{border-color:var(--danger);color:var(--danger);background:rgba(239,68,68,0.06);}
 
 /* ─────────── ONBOARDING ─────────── */
-.onboarding{display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:calc(var(--safe-top) + 30px) 28px calc(var(--safe-bot) + 130px);text-align:center;z-index:3;
+.onboarding{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:calc(var(--safe-top) + 30px) 28px 0;text-align:center;z-index:3;
   background:radial-gradient(ellipse 90% 55% at 50% 34%,rgba(245,166,35,0.09),transparent 70%),var(--bg);}
 .ob-progress{position:absolute;top:calc(var(--safe-top) + 24px);left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:5;}
 .ob-dot{width:7px;height:7px;border-radius:99px;background:var(--gray3);transition:width .35s var(--spring),background .35s;}
 .ob-dot.active{width:24px;background:var(--gold);}
 .ob-skip{position:absolute;top:calc(var(--safe-top) + 12px);right:14px;color:var(--gray);font-size:13px;z-index:5;padding:10px 12px;min-height:44px;display:inline-flex;align-items:center;}
-.ob-page{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;animation:obIn .5s var(--ease);}
+.ob-page{display:flex;flex-direction:column;align-items:center;gap:18px;width:100%;flex:1 0 auto;justify-content:center;padding-bottom:calc(var(--safe-bot) + 120px);animation:obIn .5s var(--ease);}
 @keyframes obIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
 .ob-wolf-wrap{height:312px;width:100%;display:flex;align-items:center;justify-content:center;}
 .ob-wolf-wrap.small{height:232px;}
@@ -94,6 +94,9 @@ canvas{display:block;}
 .ob-habit{display:flex;align-items:center;gap:14px;padding:15px;border-radius:16px;background:var(--card);
   border:1px solid var(--border);text-align:left;transition:border-color .2s,background .2s,transform .12s var(--spring);}
 .ob-habit:active{transform:scale(.97);}
+.ob-habit-desc{display:flex;align-items:center;gap:8px;margin-top:5px;}
+.ob-step{width:28px;height:28px;font-size:16px;}
+.ob-val{font-size:13px;color:var(--gray);min-width:92px;text-align:left;}
 .ob-habit.on{border-color:var(--gold);background:var(--gold-dim);}
 .ob-habit-ico{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--card3);flex-shrink:0;}
 .ob-habit-body{flex:1;min-width:0;}
