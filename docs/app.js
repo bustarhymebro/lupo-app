@@ -54,7 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '35'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '36'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -90,8 +90,9 @@ function load(){
       const raw=localStorage.getItem(STORE_KEY);
       // keep a single fresh backup, drop older ones so dead copies can't pile up against the quota
       Object.keys(localStorage).forEach(k=>{ if(k.indexOf(STORE_KEY+'.corrupt.')===0) localStorage.removeItem(k); });
-      if(raw){ try{ localStorage.setItem(STORE_KEY+'.corrupt.'+Date.now(), raw); }catch(_){} }
-      localStorage.removeItem(STORE_KEY); // clear the bad value so a clean default can persist
+      let backedUp=false;
+      if(raw){ try{ localStorage.setItem(STORE_KEY+'.corrupt.'+Date.now(), raw); backedUp=true; }catch(_){} }
+      if(!raw || backedUp) localStorage.removeItem(STORE_KEY); // only drop the original once a backup exists, so a quota-failed backup never destroys the only copy
     }catch(_){}
     parsed = null;
   }
@@ -173,6 +174,8 @@ function checkForNewDay(){
   let cursor = addDays(parseDayKey(state.pet.lastScoredDay), 1);
   if(cursor > today) cursor = new Date(today); // clock moved backward; nothing new to score
   if(cursor >= today) return; // nothing new to score; don't touch state or storage
+  const MAX_CATCHUP = 400; // a corrupt/forward-jumped lastScoredDay must never spin the boot loop hundreds of thousands of times
+  if((today - cursor) > MAX_CATCHUP*86400000) cursor = addDays(today, -MAX_CATCHUP);
   const prevTier = state.pet.tierIdx;
   // Snapshot so the whole scoring pass is all-or-nothing: if the write fails we roll back
   // and retry next launch instead of re-applying missed-day penalties every boot.
@@ -213,11 +216,13 @@ function maybeCreditToday(){
   const tk = todayKey();
   if(state.creditedDays.indexOf(tk) !== -1) return false;
   if(!logAllRequiredDone(ensureLog(tk))) return false;
+  const snap = { pet: Object.assign({}, state.pet), credited: state.creditedDays.slice() };
   state.creditedDays.push(tk);
   state.pet.consistentDays += 1;
   state.pet.currentStreak += 1;
   if(state.pet.currentStreak > state.pet.bestStreak) state.pet.bestStreak = state.pet.currentStreak;
   state.pet.totalDaysTracked += 1;
+  state.pet._creditPrevMissed = state.pet.missedDaysStreak; // remember so an uncheck can restore it exactly
   state.pet.missedDaysStreak = 0;
   state.pet.energy = Math.min(1, state.pet.energy + 0.2);
   state.pet.mood = moodForEnergy(state.pet.energy);
@@ -227,7 +232,7 @@ function maybeCreditToday(){
   if(leveled){ state.pet._creditPrevMax = state.pet.maxTierIdx; state.pet.maxTierIdx = state.pet.tierIdx; }
   else { state.pet._creditPrevMax = null; }
   state.pet.lastUpdated = new Date().toISOString();
-  save();
+  if(!save()){ state.pet = snap.pet; state.creditedDays = snap.credited; return false; } // couldn't persist: undo so the UI never shows growth that vanishes on reload
   if(!screens.home.hidden) renderHome();
   if(!screens.journey.hidden) renderJourney();
   let celebrated=false;
@@ -239,6 +244,7 @@ function maybeCreditToday(){
 function uncreditToday(){
   const tk=todayKey(); const i=state.creditedDays.indexOf(tk);
   if(i===-1) return false;
+  const snap = { pet: Object.assign({}, state.pet), credited: state.creditedDays.slice(), lastCelebratedDay: state.lastCelebratedDay };
   state.creditedDays.splice(i,1);
   state.pet.consistentDays = Math.max(0, state.pet.consistentDays-1);
   state.pet.currentStreak = Math.max(0, state.pet.currentStreak-1);
@@ -248,9 +254,10 @@ function uncreditToday(){
   state.pet.stage = band(levelOf());
   state.pet.tierIdx = tierIdx(levelOf());
   if(typeof state.pet._creditPrevMax==='number'){ state.pet.maxTierIdx = state.pet._creditPrevMax; state.pet._creditPrevMax = null; } // restore exact pre-credit watermark so only a form earned by today's credit can re-celebrate
+  if(typeof state.pet._creditPrevMissed==='number'){ state.pet.missedDaysStreak = state.pet._creditPrevMissed; state.pet._creditPrevMissed = null; } // make the uncheck a true inverse of the credit
   state.pet.lastUpdated = new Date().toISOString();
   if(state.lastCelebratedDay===tk) state.lastCelebratedDay=null; // let the "good job" popup fire again if they re-complete
-  save();
+  if(!save()){ state.pet = snap.pet; state.creditedDays = snap.credited; state.lastCelebratedDay = snap.lastCelebratedDay; return false; }
   if(!screens.home.hidden) renderHome();
   if(!screens.journey.hidden) renderJourney();
   return true;

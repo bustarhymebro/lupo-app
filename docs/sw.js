@@ -1,5 +1,5 @@
 // Lupo service worker. Offline-first cache
-const CACHE = 'lupo-v35';
+const CACHE = 'lupo-v36';
 const ASSETS = [
   './',
   './index.html',
