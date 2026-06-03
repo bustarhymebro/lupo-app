@@ -54,7 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '34'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '35'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -72,7 +72,7 @@ function defaultState(){
     sound:true,
     wolfArt:{},
     pet:{ name:'Lupo', stage:0, tierIdx:0, maxTierIdx:0, energy:0.5, mood:'neutral',
-          consistentDays:0, currentStreak:0, totalDaysTracked:0,
+          consistentDays:0, currentStreak:0, bestStreak:0, totalDaysTracked:0,
           createdDate:new Date().toISOString(), lastUpdated:new Date().toISOString(),
           lastScoredDay:dateKey(new Date()), missedDaysStreak:0 },
     timer:null,
@@ -103,8 +103,9 @@ function load(){
   if(!Array.isArray(state.creditedDays)) state.creditedDays = [];
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
   if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
-  ['energy','consistentDays','currentStreak','totalDaysTracked','missedDaysStreak','stage','tierIdx','maxTierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
+  ['energy','consistentDays','currentStreak','bestStreak','totalDaysTracked','missedDaysStreak','stage','tierIdx','maxTierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
   if(state.pet.maxTierIdx < state.pet.tierIdx) state.pet.maxTierIdx = state.pet.tierIdx; // never re-celebrate already-earned forms
+  if(state.pet.bestStreak < state.pet.currentStreak) state.pet.bestStreak = state.pet.currentStreak;
   state.pet.energy = Math.max(0, Math.min(1, state.pet.energy));
   if(typeof state.pet.name!=='string' || !state.pet.name) state.pet.name='Lupo';
   let _lu = new Date(state.pet.lastUpdated);
@@ -181,7 +182,7 @@ function checkForNewDay(){
     if(state.creditedDays.indexOf(dk) === -1){ // not already credited live that day
       state.pet.totalDaysTracked += 1;
       if(logAllRequiredDone(state.logs[dk])){
-        state.pet.consistentDays += 1; state.pet.currentStreak += 1; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
+        state.pet.consistentDays += 1; state.pet.currentStreak += 1; if(state.pet.currentStreak > state.pet.bestStreak) state.pet.bestStreak = state.pet.currentStreak; state.pet.missedDaysStreak = 0; state.pet.energy = Math.min(1, state.pet.energy + 0.2);
         state.creditedDays.push(dk);
       } else {
         state.pet.missedDaysStreak += 1; state.pet.currentStreak = 0; state.pet.consistentDays = Math.max(0, state.pet.consistentDays - 1); state.pet.energy = Math.max(0, state.pet.energy - 0.15);
@@ -215,6 +216,7 @@ function maybeCreditToday(){
   state.creditedDays.push(tk);
   state.pet.consistentDays += 1;
   state.pet.currentStreak += 1;
+  if(state.pet.currentStreak > state.pet.bestStreak) state.pet.bestStreak = state.pet.currentStreak;
   state.pet.totalDaysTracked += 1;
   state.pet.missedDaysStreak = 0;
   state.pet.energy = Math.min(1, state.pet.energy + 0.2);
@@ -517,7 +519,7 @@ function renderStats(){
   const compTo = oc===null ? '—' : Math.round(oc*100);
   const cards=[
     {ico:'📅',label:'TOTAL DAYS',to:p.totalDaysTracked,suffix:'',color:'#fff'},
-    {ico:'🔥',label:'STREAK',to:p.currentStreak,suffix:'',color:'#F5A623'},
+    {ico:'🔥',label:'STREAK',to:p.currentStreak,suffix:'',sub:'BEST '+p.bestStreak,color:'#F5A623'},
     {ico:'⭐',label:'LEVEL',to:displayLevel(),suffix:'',sub:tp.cur.name.toUpperCase(),color:'#F5A623'},
     {ico:'✓',label:'COMPLETION',to:compTo,suffix:(oc===null?'':'%'),color:(oc!==null&&oc>0.7)?'#22C55E':'#F5A623'},
   ];
