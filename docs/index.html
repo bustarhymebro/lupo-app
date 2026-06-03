@@ -330,7 +330,12 @@
     });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').then((reg) => {
-        if (reg) { reg.update(); setInterval(() => reg.update(), 60 * 60 * 1000); }
+        if (!reg) return;
+        reg.update();
+        setInterval(() => reg.update(), 15 * 60 * 1000);
+        // every time the app comes back to the foreground, check for a newer build and auto-apply it,
+        // so a tab/home-screen app left open never stays on a stale version (no manual cache clearing needed)
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update(); });
       }).catch(() => {});
     });
   }
