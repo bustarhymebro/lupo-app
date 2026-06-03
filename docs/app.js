@@ -54,7 +54,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '33'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '34'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -228,8 +228,10 @@ function maybeCreditToday(){
   save();
   if(!screens.home.hidden) renderHome();
   if(!screens.journey.hidden) renderJourney();
-  if(leveled){ pendingStageUp=false; showStageUp(); }
-  return leveled; // true only when a NEW FORM overlay was shown (so callers suppress the day-complete popup)
+  let celebrated=false;
+  if(leveled){ pendingStageUp=false; showStageUp(); celebrated=true; }
+  else if(STREAK_MILESTONES.indexOf(state.pet.currentStreak)!==-1){ showStreakMilestone(state.pet.currentStreak); celebrated=true; }
+  return celebrated; // a celebration overlay was shown, so callers suppress the generic day-complete popup
 }
 // Reverse a same-day credit when the user unchecks a required habit so the streak can't stay inflated.
 function uncreditToday(){
@@ -637,7 +639,7 @@ function burstConfetti(host){
 }
 // ── Accessible modal overlays (focus move + trap, Escape to close, background inert) ──
 let _modalReturn=null;
-const MODAL_LABEL={stageUp:'stageUpName',dayComplete:'dayCompleteMsg',tutorial:'tutTitle'};
+const MODAL_LABEL={stageUp:'stageUpName',dayComplete:'dayCompleteMsg',tutorial:'tutTitle',streakUp:'streakUpTitle'};
 function openModal(id){
   const m=document.getElementById(id); if(!m) return;
   m.hidden=false; m.setAttribute('role','dialog'); m.setAttribute('aria-modal','true');
@@ -692,6 +694,29 @@ function showDayComplete(){
   setTimeout(()=>burstConfetti(document.querySelector('#dayComplete .stageup-inner')),150);
 }
 document.getElementById('dayCompleteBtn').addEventListener('click',()=>{ closeModal('dayComplete'); haptic(10); });
+
+// ── Streak milestones (the streak is the whole game, so big days get their own moment) ──
+const STREAK_MILESTONES=[3,7,14,30,60,100,180,365];
+function streakLine(n){
+  if(n>=365) return 'A full year. You became someone else doing this.';
+  if(n>=180) return 'Half a year of showing up. Relentless.';
+  if(n>=100) return 'One hundred days. This is legendary.';
+  if(n>=60) return 'Sixty days straight. Unbreakable.';
+  if(n>=30) return 'Thirty days. This is just who you are now.';
+  if(n>=14) return 'Two weeks locked in. The habit is yours.';
+  if(n>=7) return 'A full week. Lupo trusts you now.';
+  return 'Three days in a row. The chain is forming.';
+}
+function showStreakMilestone(n){
+  document.getElementById('streakUpNum').textContent=n;
+  document.getElementById('streakUpTitle').textContent = (n===1?'DAY STREAK':'DAY STREAK');
+  document.getElementById('streakUpSub').textContent = streakLine(n);
+  openModal('streakUp');
+  haptic([16,55,28,55,34]); if(window.Sound) Sound.day();
+  if(!reduceMotion()){ const su=document.getElementById('streakUp'); if(su){ const bl=document.createElement('div'); bl.className='su-bloom'; su.appendChild(bl); setTimeout(()=>bl.remove(),950); } }
+  setTimeout(()=>burstConfetti(document.querySelector('#streakUp .stageup-inner')),160);
+}
+document.getElementById('streakUpBtn').addEventListener('click',()=>{ closeModal('streakUp'); haptic(10); });
 
 // ── First-run tutorial ──
 const TUT=[
