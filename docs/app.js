@@ -15,7 +15,8 @@ const TIERS = [
 ];
 function tierIdx(lvl){ let i=0; for(let k=0;k<TIERS.length;k++){ if(lvl>=TIERS[k].at) i=k; } return i; }
 const PAINTED=['assets/wolf/painted-cut-0.png','assets/wolf/painted-cut-1.png','assets/wolf/painted-cut-2.png','assets/wolf/painted-cut-3.png','assets/wolf/painted-cut-4.png'];
-function wolfImg(i){ i=Math.max(0,Math.min(4, i|0)); return (state && state.wolfArt && state.wolfArt[i]) || PAINTED[i]; }
+function isValidArt(s){ return typeof s==='string' && /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(s); }
+function wolfImg(i){ i=Math.max(0,Math.min(4, i|0)); const a=state && state.wolfArt && state.wolfArt[i]; return isValidArt(a) ? a : PAINTED[i]; }
 function drawWolf(idOrEl, i){ const el=typeof idOrEl==='string'?document.getElementById(idOrEl):idOrEl; if(!el) return; const src=wolfImg(i); const key='w:'+src; if(el.dataset.w!==key){ el.dataset.w=key; el.innerHTML='<img class="wolf-svg-el wolf-photo" src="'+src+'" alt="" aria-hidden="true">'; } }
 
 // 5 maturity bands drive mood flavor (reuse of the original tone)
@@ -54,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '36'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
+const BUILD = '37'; // shown on Profile so a screenshot reveals which build is actually loaded (diagnoses stale PWA cache)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -122,6 +123,7 @@ function load(){
   if(artParsed && typeof artParsed==='object'){ state.wolfArt=artParsed; }
   else if(parsed && parsed.wolfArt && typeof parsed.wolfArt==='object' && Object.keys(parsed.wolfArt).length){ state.wolfArt=parsed.wolfArt; saveArt(); }
   if(!state.wolfArt || typeof state.wolfArt!=='object') state.wolfArt={};
+  Object.keys(state.wolfArt).forEach(k=>{ if(!isValidArt(state.wolfArt[k])) delete state.wolfArt[k]; }); // drop anything that isn't a clean image data URL before it can reach innerHTML
 }
 // Main state save. Excludes wolfArt (kept in its own key) so habit/streak data stays tiny and almost never hits quota.
 function save(){ try{ const m={}; for(const k in state){ if(k!=='wolfArt') m[k]=state[k]; } localStorage.setItem(STORE_KEY, JSON.stringify(m)); return true; }catch(e){ notifyStorageFull(); return false; } }
@@ -299,13 +301,18 @@ function animateNumber(el,to,dur,suffix){ suffix=suffix||''; dur=dur||700;
   const s=performance.now();
   (function tick(now){ const p=Math.min(1,(now-s)/dur); el.textContent=Math.round(to*(1-Math.pow(1-p,3)))+suffix; if(p<1) el._numRaf=requestAnimationFrame(tick); else el._numRaf=null; })(performance.now()); }
 function handleWolfUpload(file, band){
+  if(!file || !/^image\//.test(file.type||'')){ alert('Please choose an image file.'); return; }
+  if(file.size > 10*1024*1024){ alert('That image is too large. Pick one under 10MB.'); return; }
   const r=new FileReader();
+  r.onerror=()=>alert("Could not read that image. Try another one.");
   r.onload=()=>{ const img=new Image();
+    img.onerror=()=>alert("That image could not be opened. Try a JPG or PNG.");
     img.onload=()=>{ const max=440; const sc=Math.min(1, max/Math.max(img.width,img.height));
       const cw=Math.round(img.width*sc), ch=Math.round(img.height*sc);
       const cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
       cv.getContext('2d').drawImage(img,0,0,cw,ch);
-      let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ url=r.result; }
+      let url; try{ url=cv.toDataURL('image/jpeg',0.85); }catch(e){ alert("Could not process that image. Try another."); return; }
+      if(!isValidArt(url)){ return; }
       if(!state.wolfArt) state.wolfArt={};
       const prev=state.wolfArt[band]; state.wolfArt[band]=url;
       if(!saveArt()){ if(prev===undefined) delete state.wolfArt[band]; else state.wolfArt[band]=prev; alert('That image is too large to store. Try a smaller one.'); return; }
@@ -631,7 +638,7 @@ function scheduleReminder(){
 }
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(confirm('Reset ALL progress? Your wolf goes back to a newborn pup. This cannot be undone.')){
-    localStorage.removeItem(STORE_KEY); localStorage.removeItem(ART_KEY); load(); startOnboarding();
+    localStorage.removeItem(STORE_KEY); localStorage.removeItem(ART_KEY); localStorage.removeItem('lupo.waitlist'); load(); startOnboarding(); // honor the privacy policy's "reset removes all stored data" promise
   }
 });
 
@@ -729,9 +736,9 @@ document.getElementById('streakUpBtn').addEventListener('click',()=>{ closeModal
 
 // ── First-run tutorial ──
 const TUT=[
-  {i:0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows from a pup to full grown. Slip, and he regresses. He answers to you.'},
+  {i:0, t:'Meet your wolf.',        b:'Every day you keep your habits, he grows from a pup all the way to a full grown Alpha. Slip, and he regresses. He answers to you.'},
   {i:1, t:'Log your day.',          b:'In Habits, check things off or hit Start to run a timer for sleep, time off your phone, or workouts. Finish them to feed him.'},
-  {i:3, t:'Watch him grow up.',     b:'Journey shows all five forms ahead, from Pup to Full Grown. Tiny gains daily. The streak is the whole game.'},
+  {i:2, t:'Watch him grow up.',     b:'Journey shows all five forms ahead, from Pup to Alpha. Tiny gains daily. The streak is the whole game.'},
   {i:4, t:"Don't break the chain.", b:'Come back every single day. Miss too many and he fades. Ready?'},
 ];
 let tutI=0;
@@ -786,6 +793,7 @@ function completeOnboarding(name, selected){
   state=defaultState(); state.onboarded=true; state.pet.name=name;
   HABIT_ORDER.forEach(k=>{ state.habits[k].enabled = HABITS[k].required || selected.includes(k); });
   state.pet.lastUpdated=new Date().toISOString(); state.pet.createdDate=new Date().toISOString();
+  state.pet.mood=moodForEnergy(state.pet.energy); // so day one reads "Decent start" not the scolding default
   ensureLog(todayKey()); save(); haptic([12,50,20]); enterApp();
 }
 
