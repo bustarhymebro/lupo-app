@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '48'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '49'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -577,10 +577,11 @@ function renderStats(){
   grid.querySelectorAll('.stat-card-val').forEach((el,i)=>{ const to=+el.dataset.to; if(Number.isFinite(to)) animateNumber(el,to,700+i*70,el.dataset.suffix); else el.textContent=el.dataset.to; });
 
   const hm=document.getElementById('heatmap'); hm.innerHTML='';
-  for(let off=13;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const isToday=off===0; const e=state.logs[dateKey(d)]; let color='var(--card3)';
-    if(e){ if(logAllRequiredDone(e))color='rgba(34,197,94,0.75)'; else if(logCompletionRate(e)>0)color='rgba(245,166,35,0.6)'; else if(!isToday)color='rgba(239,68,68,0.5)'; } // today is never marked failed before it's over
-    const c=document.createElement('div'); c.className='heat-cell'; c.innerHTML=`<div class="heat-sq${isToday?' today':''}" style="background:${color}"></div><div class="heat-d">${d.getDate()}</div>`; hm.appendChild(c); }
-  hm.querySelectorAll('.heat-sq').forEach((sq,i)=>setTimeout(()=>sq.classList.add('show'),i*35+50));
+  for(let off=13;off>=0;off--){ const d=addDays(startOfDay(new Date()),-off); const isToday=off===0; const e=state.logs[dateKey(d)]; const done=e&&logAllRequiredDone(e); const rate=e?logCompletionRate(e):0;
+    let color='var(--card3)'; if(e){ color=done?'rgba(34,197,94,0.85)':(rate>0?'rgba(245,166,35,0.7)':(isToday?'var(--card3)':'rgba(239,68,68,0.5)')); } // today is never marked failed before it's over
+    const h=e?Math.max(14,Math.round((done?1:rate)*100)):(isToday?14:10); // bar height as % of track
+    const c=document.createElement('div'); c.className='heat-cell'; c.innerHTML=`<div class="heat-track"><div class="heat-bar${isToday?' today':''}" style="height:${h}%;background:${color}"></div></div><div class="heat-d">${d.getDate()}</div>`; hm.appendChild(c); }
+  hm.querySelectorAll('.heat-bar').forEach((b,i)=>setTimeout(()=>b.classList.add('show'),i*35+50));
 
   const wl=document.getElementById('weekList'); wl.innerHTML=''; const eh=enabledHabits();
   const everCompleted=Object.keys(state.logs).some(dayHasData);

@@ -224,9 +224,10 @@ canvas{display:block;}
 .heatmap{display:flex;gap:5px;padding:0 20px;overflow-x:auto;}
 .heatmap::-webkit-scrollbar{display:none;}
 .heat-cell{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;}
-.heat-sq{width:18px;height:24px;border-radius:5px;background:var(--card3);opacity:0;transform:scale(.5);transition:opacity .35s,transform .35s var(--spring);}
-.heat-sq.show{opacity:1;transform:scale(1);}
-.heat-sq.today{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(245,181,68,.4);}
+.heat-track{width:16px;height:54px;display:flex;align-items:flex-end;justify-content:center;}
+.heat-bar{width:100%;min-height:5px;border-radius:4px;background:var(--card3);transform:scaleY(0);transform-origin:bottom;opacity:0;transition:transform .45s var(--spring),opacity .3s;}
+.heat-bar.show{transform:scaleY(1);opacity:1;}
+.heat-bar.today{box-shadow:0 0 0 2px var(--gold),0 0 8px rgba(245,181,68,.4);}
 .heat-d{font-family:var(--mono);font-size:7px;color:var(--gray2);}
 .week-list{display:flex;flex-direction:column;gap:8px;padding:0 20px;}
 .week-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:var(--card);border:1px solid var(--border);}
