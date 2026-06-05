@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '47'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '48'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -70,6 +70,7 @@ function defaultState(){
     tutorialSeen:false,
     lastCelebratedDay:null,
     creditedDays:[],
+    achievementsSeen:[],
     sound:true,
     wolfArt:{},
     pet:{ name:'Lupo', stage:0, tierIdx:0, maxTierIdx:0, energy:0.5, mood:'neutral',
@@ -103,6 +104,7 @@ function load(){
   if(!state.logs || typeof state.logs!=='object') state.logs = {};
   if(!state.wolfArt || typeof state.wolfArt!=='object') state.wolfArt = {};
   if(!Array.isArray(state.creditedDays)) state.creditedDays = [];
+  if(!Array.isArray(state.achievementsSeen)) state.achievementsSeen = ACHIEVEMENTS.filter(a=>{ try{ return a.test(state); }catch(e){ return false; } }).map(a=>a.id); // seed already-earned so they don't toast retroactively
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
   if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
   ['energy','consistentDays','currentStreak','bestStreak','totalDaysTracked','missedDaysStreak','stage','tierIdx','maxTierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
@@ -211,6 +213,7 @@ function checkForNewDay(){
   Object.keys(state.logs).forEach(k=>{ if(k < cut) delete state.logs[k]; });
   if(state.pet.tierIdx > state.pet.maxTierIdx){ state.pet.maxTierIdx = state.pet.tierIdx; pendingStageUp = true; }
   save();
+  runAchievementCheck();
 }
 // Immediate same-day growth: finishing your required habits levels the wolf now.
 function maybeCreditToday(){
@@ -239,6 +242,7 @@ function maybeCreditToday(){
   let celebrated=false;
   if(leveled){ pendingStageUp=false; showStageUp(); celebrated=true; }
   else if(STREAK_MILESTONES.indexOf(state.pet.currentStreak)!==-1){ showStreakMilestone(state.pet.currentStreak); celebrated=true; }
+  runAchievementCheck();
   return celebrated; // a celebration overlay was shown, so callers suppress the generic day-complete popup
 }
 // Reverse a same-day credit when the user unchecks a required habit so the streak can't stay inflated.
@@ -807,6 +811,25 @@ function renderAchievements(){
   g.innerHTML=ACHIEVEMENTS.map(a=>{ const got=!!a.test(state); if(got) count++;
     return `<div class="ach${got?'':' locked'}"><div class="ach-ico">${got?a.icon:'🔒'}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`; }).join('');
   const lbl=document.getElementById('achCount'); if(lbl) lbl.textContent=count+' / '+ACHIEVEMENTS.length;
+}
+// fire a toast the first time each badge is earned
+function runAchievementCheck(){
+  if(!Array.isArray(state.achievementsSeen)) state.achievementsSeen=[];
+  const newly=ACHIEVEMENTS.filter(a=>{ let ok=false; try{ ok=a.test(state); }catch(e){} return ok && state.achievementsSeen.indexOf(a.id)===-1; });
+  if(!newly.length) return;
+  newly.forEach(a=>state.achievementsSeen.push(a.id)); save();
+  showAchievementToast(newly[0]);
+}
+function showAchievementToast(a){
+  if(document.querySelector('.stageup:not([hidden])')) return; // a full-screen celebration is already up; the badge is still marked earned
+  try{
+    const t=document.createElement('div'); t.className='ach-toast'; t.setAttribute('role','status');
+    t.innerHTML=`<span class="at-ico" aria-hidden="true">${a.icon}</span><span class="at-txt"><b>Achievement unlocked</b>${a.name}</span>`;
+    document.body.appendChild(t);
+    if(window.Sound) Sound.level && Sound.level();
+    requestAnimationFrame(()=> t.classList.add('show'));
+    setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=>t.remove(),400); }, 3600);
+  }catch(e){}
 }
 
 // ── First-run tutorial ──

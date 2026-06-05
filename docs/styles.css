@@ -167,6 +167,13 @@ canvas{display:block;}
 .ach-name{font-family:var(--display);font-weight:700;font-size:14px;margin-top:7px;color:var(--gold);}
 .ach.locked .ach-name{color:var(--gray);}
 .ach-desc{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.35;}
+.ach-toast{position:fixed;left:50%;bottom:calc(var(--safe-bot) + 84px);transform:translateX(-50%) translateY(16px);z-index:120;display:flex;align-items:center;gap:12px;pointer-events:none;max-width:90vw;
+  background:linear-gradient(135deg,#2A2138,#1B2132);border:1px solid rgba(245,181,68,.5);box-shadow:0 8px 28px rgba(0,0,0,.5),0 0 22px rgba(245,181,68,.22);
+  padding:12px 18px;border-radius:16px;opacity:0;transition:opacity .35s,transform .35s;}
+.ach-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.ach-toast .at-ico{font-size:30px;}
+.ach-toast .at-txt{display:flex;flex-direction:column;line-height:1.25;font-family:var(--display);font-weight:700;font-size:15px;color:#fff;}
+.ach-toast .at-txt b{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--gold);}
 
 /* ─────────── page heads ─────────── */
 .page-head{padding:calc(var(--safe-top) + 22px) 22px 18px;}
