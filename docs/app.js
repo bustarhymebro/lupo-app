@@ -43,19 +43,19 @@ const HABITS = {
   screenTime:{ name:'Screen Time',      icon:'📵', required:true,  kind:'limit', def:3,  unit:'h', min:1,   max:12,  step:1,   auto:'Auto-verified in the iOS app', label:t=>`Stay under ${fmtT(t,'h')}` },
   sleep:     { name:'Sleep',            icon:'🌙', required:false, kind:'timer', def:8,  unit:'h', min:1,   max:15,  step:1,   label:t=>`${fmtT(t,'h')} of sleep` },
   focus:     { name:'Focus · Off Phone',icon:'🧠', required:false, kind:'timer', def:2,  unit:'h', min:1,   max:8,   step:1,   label:t=>`${fmtT(t,'h')} off your phone` },
-  workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:15,  max:180, step:15,  label:t=>`${fmtT(t,'m')} active` },
+  workout:   { name:'Workout',          icon:'💪', required:false, kind:'timer', def:30, unit:'m', min:15,  max:480, step:15,  label:t=>`${fmtT(t/60,'h')} active` },
   read:      { name:'Read',             icon:'📖', required:false, kind:'timer', def:20, unit:'m', min:5,   max:120, step:5,   label:t=>`${fmtT(t,'m')} reading` },
-  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'count', def:8,  unit:'cups', min:1, max:20, step:1,   label:t=>`${t} cups` },
+  water:     { name:'Hydrate',          icon:'💧', required:false, kind:'count', def:64, unit:'oz', min:1, max:100, step:1,   label:t=>`${t} oz` },
 };
 const HABIT_ORDER = ['screenTime','sleep','focus','workout','read','water'];
 function habitTarget(k){ const h=state.habits[k]; return (h && h.target!=null) ? h.target : HABITS[k].def; }
 function habitLabel(k){ return HABITS[k].label(habitTarget(k)); }
 function targetMs(k){ const t=habitTarget(k); return HABITS[k].unit==='h' ? t*3600000 : t*60000; }
 function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cups'? t+' cups' : fmtT(t,u); }
-function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
+function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step)*h.step; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '49'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '50'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -79,7 +79,7 @@ function defaultState(){
           lastScoredDay:dateKey(new Date()), missedDaysStreak:0 },
     timer:null,
     habits:{ screenTime:{enabled:true,target:3}, sleep:{enabled:false,target:8}, focus:{enabled:false,target:2},
-             workout:{enabled:false,target:30}, read:{enabled:false,target:20}, water:{enabled:false,target:8} },
+             workout:{enabled:false,target:30}, read:{enabled:false,target:20}, water:{enabled:false,target:64} },
     logs:{},
   };
 }
@@ -435,15 +435,18 @@ function renderHabits(){
       if(activeForThis) pill=`<button class="timer-pill stop" data-act="cancel"><span data-timer-clock>${fmtClock(timerLeftMs())}</span></button>`;
       else pill=`<button class="timer-pill" data-act="start" ${done?'style="display:none"':''}>▶ Start</button>`;
     } else if(isCount){
-      pill=`<div class="count-ctl"><button class="cup-step" data-c="-1" type="button" aria-label="Remove a cup">–</button><span class="cup-n">${cups}/${habitTarget(k)}</span><button class="cup-step" data-c="1" type="button" aria-label="Add a cup">+</button></div>`;
+      pill=`<div class="count-ctl"><button class="cup-step" data-c="-1" type="button" aria-label="Remove one ${h.unit}">–</button><span class="cup-n">${cups}/${habitTarget(k)} ${h.unit}</span><button class="cup-step" data-c="1" type="button" aria-label="Add one ${h.unit}">+</button></div>`;
     }
     const adjustable = isTimer || h.kind==='limit'; // sleep / focus / workout / read / screen time have a goal you can tune (water uses its own cup counter)
     const targetInner = adjustable
       ? `<button class="ht-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ht-val">${habitLabel(k)}</span><button class="ht-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button>`
-      : habitLabel(k);
+      : (isCount ? '' : habitLabel(k)); // count habits show their goal in the counter (0/64 oz), no need to repeat it
+    // the timer Start/Stop button gets its own full-width row below the goal so it never crowds the goal stepper; the compact water counter stays inline on the right
+    const bodyPill = isTimer ? pill : '';
+    const sidePill = isCount ? pill : '';
     card.innerHTML=`<div class="habit-card-ico">${h.icon}</div>
-      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target${adjustable?' adj':''}">${targetInner}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}</div>
-      ${pill}
+      <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target${adjustable?' adj':''}">${targetInner}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}${bodyPill}</div>
+      ${sidePill}
       <div class="habit-check ${done?'checked':''}"><svg viewBox="0 0 12 9" fill="none"><path d="M1 4.5L4.5 8L11 1" stroke="#0A0A0A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
     if(isCount){
       const t=habitTarget(k);
@@ -461,6 +464,15 @@ function renderHabits(){
     });
     list.appendChild(card);
   });
+  // add any habit you didn't pick at the start, right here (no digging through settings)
+  const offHabits = HABIT_ORDER.filter(k=>!state.habits[k].enabled);
+  if(offHabits.length){
+    const add=document.createElement('div'); add.className='add-habit';
+    add.innerHTML=`<div class="add-habit-h">ADD A HABIT</div><div class="add-habit-row">`+
+      offHabits.map(k=>`<button class="add-chip" data-k="${k}" type="button">${HABITS[k].icon} ${HABITS[k].name}<span class="add-plus">+</span></button>`).join('')+`</div>`;
+    add.querySelectorAll('.add-chip').forEach(b=> b.addEventListener('click',()=>{ const k=b.dataset.k; state.habits[k].enabled=true; ensureLog(todayKey()); save(); haptic(12); if(window.Sound) Sound.tap(); renderHabits(); }));
+    list.appendChild(add);
+  }
   stagger([...list.children]);
   updateHabitCompletion(true);
 }

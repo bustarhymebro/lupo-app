@@ -157,7 +157,15 @@ canvas{display:block;}
 .count-ctl{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .cup-step{width:32px;height:32px;border-radius:9px;background:var(--gold-dim);border:1px solid rgba(245,181,68,.4);color:var(--gold);font-size:18px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;}
 .cup-step:active{transform:scale(.88);}
-.cup-n{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--gold);min-width:40px;text-align:center;}
+.cup-n{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--gold);min-width:48px;text-align:center;}
+/* add a habit (Today screen) */
+.add-habit{margin-top:16px;}
+.add-habit-h{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gray2);margin:0 2px 10px;}
+.add-habit-row{display:flex;flex-wrap:wrap;gap:8px;}
+.add-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:13px;background:var(--card);border:1px solid var(--border);color:var(--cream);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:transform .12s,border-color .2s,background .2s;}
+.add-chip:hover{border-color:var(--gold);}
+.add-chip:active{transform:scale(.95);}
+.add-plus{color:var(--gold);font-weight:800;font-size:16px;line-height:1;}
 /* achievements */
 .ach-count{font-family:var(--mono);font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;}
 .ach-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
@@ -498,6 +506,7 @@ canvas{display:block;}
 .timer-pill{height:42px;padding:0 16px;border-radius:13px;background:var(--gold-dim);border:1px solid rgba(245,181,68,.4);color:var(--gold);font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.5px;flex-shrink:0;transition:transform .12s;}
 .timer-pill:active{transform:scale(.95);}
 .timer-pill.stop{background:rgba(242,104,90,.14);border-color:rgba(242,104,90,.5);color:var(--danger);min-width:78px;}
+.habit-card-body>.timer-pill{display:flex;align-items:center;justify-content:center;width:100%;margin-top:11px;}
 .habit-card.running{border-left-color:var(--gold);background:linear-gradient(90deg,rgba(245,181,68,.07),var(--card) 40%);}
 .timer-card{display:flex;align-items:center;gap:14px;margin:0 20px 14px;padding:14px 16px;border-radius:18px;background:linear-gradient(135deg,rgba(245,181,68,.13),var(--card));border:1px solid rgba(245,181,68,.32);animation:rise .4s var(--ease);}
 .timer-ring{width:58px;height:58px;flex-shrink:0;transform:rotate(-90deg);}
