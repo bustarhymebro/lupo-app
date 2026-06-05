@@ -83,10 +83,11 @@ form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
   </div>
 
 <script>
-  // Signups go straight to chleb@chleb.ai via Formsubmit (no account, no key needed).
-  // The FIRST signup triggers a one-time activation email to chleb@chleb.ai. Click the
-  // link in it once, and every signup after that lands in the inbox automatically.
+  // Signups land in two places: a Google Sheet (Apps Script web app, the live list)
+  // and chleb@chleb.ai via Formsubmit as a backup. Formsubmit needs a one-time
+  // activation click on its first email before those start arriving.
   const ENDPOINT = "https://formsubmit.co/ajax/chleb@chleb.ai";
+  const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzTeM_MFZhi3jcDXmlLca2GKsmGuZLWL2_Oxc2rnQ77MtZzTCYxA-w5uNq7kLSS1qDnLA/exec";
 
   const form = document.getElementById('form');
   const btn = document.getElementById('btn');
@@ -103,6 +104,9 @@ form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
     btn.disabled = true; btn.textContent = 'JOINING…';
     // local fallback so nothing is lost
     try { const k='lupo.waitlist'; const arr=JSON.parse(localStorage.getItem(k)||'[]'); arr.push({email,ts:Date.now()}); localStorage.setItem(k,JSON.stringify(arr)); } catch(_){}
+    // append to the Google Sheet. no-cors + text/plain so Apps Script gets the raw
+    // JSON body with no CORS preflight (which it cannot answer); we do not need to read the reply
+    try{ fetch(SHEET_ENDPOINT, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ email }) }); }catch(_){}
     try{
       await fetch(ENDPOINT, {
         method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
