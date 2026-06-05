@@ -158,6 +158,15 @@ canvas{display:block;}
 .cup-step{width:32px;height:32px;border-radius:9px;background:var(--gold-dim);border:1px solid rgba(245,181,68,.4);color:var(--gold);font-size:18px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;}
 .cup-step:active{transform:scale(.88);}
 .cup-n{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--gold);min-width:40px;text-align:center;}
+/* achievements */
+.ach-count{font-family:var(--mono);font-size:10px;color:var(--gold);font-weight:700;letter-spacing:1px;}
+.ach-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+.ach{background:var(--card);border:1px solid var(--border);border-top:1px solid rgba(120,140,200,.10);border-radius:16px;padding:14px 12px;text-align:center;box-shadow:0 3px 0 #0A1027;}
+.ach.locked{opacity:.45;}
+.ach-ico{font-size:30px;line-height:1;}
+.ach-name{font-family:var(--display);font-weight:700;font-size:14px;margin-top:7px;color:var(--gold);}
+.ach.locked .ach-name{color:var(--gray);}
+.ach-desc{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.35;}
 
 /* ─────────── page heads ─────────── */
 .page-head{padding:calc(var(--safe-top) + 22px) 22px 18px;}

@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step*1e6)/1e6; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '46'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '47'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -629,6 +629,7 @@ function renderProfile(){
     if(!locked) row.querySelector('.switch').addEventListener('click',()=>{ state.habits[k].enabled=!state.habits[k].enabled; ensureLog(todayKey()); save(); haptic(10); renderProfile(); });
     ml.appendChild(row);
   });
+  renderAchievements();
   const rt=document.getElementById('reminderToggle'); rt.classList.toggle('on',!!state.reminders); rt.setAttribute('aria-pressed',!!state.reminders);
   const st=document.getElementById('soundToggle'); if(st){ st.classList.toggle('on',!!state.sound); st.setAttribute('aria-pressed',!!state.sound); }
 }
@@ -786,6 +787,27 @@ function showStreakMilestone(n){
   setTimeout(()=>burstConfetti(document.querySelector('#streakUp .stageup-inner')),160);
 }
 document.getElementById('streakUpBtn').addEventListener('click',()=>{ closeModal('streakUp'); haptic(10); });
+
+// ── Achievements (collectible goals, computed from current state) ──
+const ACHIEVEMENTS=[
+  {id:'first',  icon:'🐾', name:'First Steps', desc:'Finish your first full day',  test:s=>s.pet.bestStreak>=1 || s.pet.totalDaysTracked>=1},
+  {id:'week',   icon:'🔥', name:'Week Warrior',desc:'Hit a 7 day streak',          test:s=>s.pet.bestStreak>=7},
+  {id:'two',    icon:'⚡', name:'Locked In',    desc:'Hit a 14 day streak',         test:s=>s.pet.bestStreak>=14},
+  {id:'month',  icon:'🌙', name:'Unbreakable',  desc:'Hit a 30 day streak',         test:s=>s.pet.bestStreak>=30},
+  {id:'hund',   icon:'💎', name:'Legendary',    desc:'Hit a 100 day streak',        test:s=>s.pet.bestStreak>=100},
+  {id:'yr',     icon:'🌱', name:'Yearling',     desc:'Grow him to a Yearling',      test:s=>s.pet.maxTierIdx>=1},
+  {id:'sct',    icon:'🧭', name:'Scout',        desc:'Grow him to a Scout',         test:s=>s.pet.maxTierIdx>=2},
+  {id:'hnt',    icon:'🏹', name:'Hunter',       desc:'Grow him to a Hunter',        test:s=>s.pet.maxTierIdx>=3},
+  {id:'alpha',  icon:'👑', name:'Alpha',        desc:'Grow him to a full Alpha',    test:s=>s.pet.maxTierIdx>=4},
+  {id:'ded',    icon:'📅', name:'Dedicated',    desc:'Track 50 total days',         test:s=>s.pet.totalDaysTracked>=50},
+];
+function renderAchievements(){
+  const g=document.getElementById('achGrid'); if(!g) return;
+  let count=0;
+  g.innerHTML=ACHIEVEMENTS.map(a=>{ const got=!!a.test(state); if(got) count++;
+    return `<div class="ach${got?'':' locked'}"><div class="ach-ico">${got?a.icon:'🔒'}</div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div>`; }).join('');
+  const lbl=document.getElementById('achCount'); if(lbl) lbl.textContent=count+' / '+ACHIEVEMENTS.length;
+}
 
 // ── First-run tutorial ──
 const TUT=[
