@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step)*h.step; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '50'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '51'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
@@ -68,6 +68,7 @@ function defaultState(){
     onboarded:false,
     reminders:false,
     tutorialSeen:false,
+    waterOz:true, // new states are already in ounces; only old cups states get migrated on load
     lastCelebratedDay:null,
     creditedDays:[],
     achievementsSeen:[],
@@ -107,6 +108,7 @@ function load(){
   if(!Array.isArray(state.achievementsSeen)) state.achievementsSeen = ACHIEVEMENTS.filter(a=>{ try{ return a.test(state); }catch(e){ return false; } }).map(a=>a.id); // seed already-earned so they don't toast retroactively
   HABIT_ORDER.forEach(k => { if(!state.habits[k]) state.habits[k]={enabled:false}; if(typeof state.habits[k].target!=='number') state.habits[k].target=HABITS[k].def; });
   if(HABITS.screenTime.required) state.habits.screenTime.enabled = true; // required habit is always on
+  if(parsed && parsed.waterOz!==true){ const w=state.habits.water; if(w && typeof w.target==='number' && w.target<=20) w.target=Math.min(HABITS.water.max, Math.max(HABITS.water.min, w.target*8)); state.waterOz=true; save(); } // one-time: a saved state from before ounces had cups goals; convert them (8 oz per cup) and persist so it only runs once
   ['energy','consistentDays','currentStreak','bestStreak','totalDaysTracked','missedDaysStreak','stage','tierIdx','maxTierIdx'].forEach(f=>{ if(!Number.isFinite(state.pet[f])) state.pet[f]=def.pet[f]; });
   if(state.pet.maxTierIdx < state.pet.tierIdx) state.pet.maxTierIdx = state.pet.tierIdx; // never re-celebrate already-earned forms
   if(state.pet.bestStreak < state.pet.currentStreak) state.pet.bestStreak = state.pet.currentStreak;
@@ -435,15 +437,16 @@ function renderHabits(){
       if(activeForThis) pill=`<button class="timer-pill stop" data-act="cancel"><span data-timer-clock>${fmtClock(timerLeftMs())}</span></button>`;
       else pill=`<button class="timer-pill" data-act="start" ${done?'style="display:none"':''}>▶ Start</button>`;
     } else if(isCount){
-      pill=`<div class="count-ctl"><button class="cup-step" data-c="-1" type="button" aria-label="Remove one ${h.unit}">–</button><span class="cup-n">${cups}/${habitTarget(k)} ${h.unit}</span><button class="cup-step" data-c="1" type="button" aria-label="Add one ${h.unit}">+</button></div>`;
+      pill=`<div class="count-ctl"><span class="micro-lbl">TODAY</span><button class="cup-step" data-c="-1" type="button" aria-label="Remove one ${h.unit}">–</button><span class="cup-n">${cups}/${habitTarget(k)} ${h.unit}</span><button class="cup-step" data-c="1" type="button" aria-label="Add one ${h.unit}">+</button></div>`;
     }
-    const adjustable = isTimer || h.kind==='limit'; // sleep / focus / workout / read / screen time have a goal you can tune (water uses its own cup counter)
+    const adjustable = isTimer || h.kind==='limit' || isCount; // every habit goal can be tuned right on the card
+    const goalLbl = isCount ? '<span class="micro-lbl">GOAL</span>' : '';
     const targetInner = adjustable
-      ? `<button class="ht-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ht-val">${habitLabel(k)}</span><button class="ht-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button>`
-      : (isCount ? '' : habitLabel(k)); // count habits show their goal in the counter (0/64 oz), no need to repeat it
-    // the timer Start/Stop button gets its own full-width row below the goal so it never crowds the goal stepper; the compact water counter stays inline on the right
-    const bodyPill = isTimer ? pill : '';
-    const sidePill = isCount ? pill : '';
+      ? `${goalLbl}<button class="ht-step" data-d="-1" type="button" aria-label="Lower ${h.name} goal">–</button><span class="ht-val">${habitLabel(k)}</span><button class="ht-step" data-d="1" type="button" aria-label="Raise ${h.name} goal">+</button>`
+      : habitLabel(k);
+    // the timer Start/Stop button and the water counter each get their own full-width row below the goal so they never crowd the goal stepper
+    const bodyPill = (isTimer || isCount) ? pill : '';
+    const sidePill = '';
     card.innerHTML=`<div class="habit-card-ico">${h.icon}</div>
       <div class="habit-card-body"><div class="habit-card-name">${h.name}</div><div class="habit-card-target${adjustable?' adj':''}">${targetInner}</div>${h.auto?`<div class="habit-card-auto">${h.auto}</div>`:''}${bodyPill}</div>
       ${sidePill}
