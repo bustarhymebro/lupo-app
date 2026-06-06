@@ -3,7 +3,7 @@
   "short_name": "Lupo",
   "description": "A discipline tracker, not just an app. Raise a wolf by keeping your real-world habits.",
   "id": "/",
-  "start_url": ".",
+  "start_url": "./app.html",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",

@@ -3,346 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#121726">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lupo">
-<meta name="description" content="Raise a wolf by earning it in real life. A discipline tracker, not just an app.">
-<!-- Social share preview (shown when the link is posted) -->
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Lupo">
-<meta property="og:title" content="Lupo: Raise Your Wolf">
-<meta property="og:description" content="Raise a wolf by earning it in real life. Keep your habits and he grows. Slip and he fades.">
+<meta name="theme-color" content="#0E1320">
+<title>Lupo Waitlist</title>
+<meta name="description" content="Raise a wolf by staying off your phone. Join the Lupo waitlist for early access.">
+<meta property="og:title" content="Lupo. Raise a wolf by beating your phone.">
+<meta property="og:description" content="A wolf you raise by staying off your phone. Stay disciplined, he grows. Join the waitlist.">
 <meta property="og:image" content="https://raiselupo.chleb.ai/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:url" content="https://raiselupo.chleb.ai/">
+<meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Lupo: Raise Your Wolf">
-<meta name="twitter:description" content="Raise a wolf by earning it in real life. Keep your habits and he grows. Slip and he fades.">
+<meta name="twitter:title" content="Lupo. Raise a wolf by beating your phone.">
+<meta name="twitter:description" content="A wolf you raise by staying off your phone. Stay disciplined, he grows. Join the waitlist.">
 <meta name="twitter:image" content="https://raiselupo.chleb.ai/og-image.png">
-<title>Lupo</title>
+<link rel="icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@600;800&display=swap">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+:root{--navy:#0E1320;--navy2:#070A12;--card:#19202F;--gold:#F5B544;--gold2:#FFD37A;--cream:#F0E9DA;--gray:#9AA3B5;--border:rgba(255,255,255,.08);}
+html,body{min-height:100%;}
+body{background:radial-gradient(120% 70% at 50% -10%,rgba(245,181,68,.10),transparent 55%),var(--navy);
+  color:#EEF1F8;font-family:'Onest',-apple-system,system-ui,sans-serif;min-height:100vh;min-height:100dvh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 22px;text-align:center;}
+.wrap{width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:18px;animation:rise .6s cubic-bezier(.22,.61,.36,1);}
+@keyframes rise{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.logo{width:140px;height:140px;border-radius:34px;box-shadow:0 22px 60px rgba(0,0,0,.5),0 0 70px rgba(245,181,68,.18);animation:float 5s ease-in-out infinite;}
+.kicker{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;letter-spacing:.32em;color:var(--gold);text-transform:uppercase;}
+h1{font-family:'Bricolage Grotesque',sans-serif;font-size:40px;font-weight:800;line-height:1.04;letter-spacing:-1.5px;}
+h1 .g{background:linear-gradient(135deg,var(--gold2),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.sub{font-size:16px;color:var(--gray);line-height:1.6;max-width:380px;}
+form{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+.email{width:100%;height:56px;background:var(--card);border:1px solid var(--border);border-radius:15px;color:#fff;
+  padding:0 18px;font-size:16px;font-family:inherit;outline:none;transition:border-color .2s,box-shadow .2s;}
+.email:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,181,68,.15);}
+.btn{width:100%;height:56px;border:none;border-radius:15px;background:linear-gradient(135deg,var(--gold2),var(--gold));
+  color:#0A0A0A;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:800;letter-spacing:1.5px;cursor:pointer;
+  box-shadow:0 10px 30px rgba(245,181,68,.28);transition:transform .14s,box-shadow .2s;}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.6;}
+.note{font-size:12px;color:#5C6577;}
+.proof{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--gray);margin-top:2px;}
+.dot{width:7px;height:7px;border-radius:50%;background:#34D17F;box-shadow:0 0 8px #34D17F;}
+.success{display:none;flex-direction:column;align-items:center;gap:14px;animation:rise .5s ease;}
+.success .big{font-family:'Bricolage Grotesque',sans-serif;font-size:30px;font-weight:800;}
+.success .em{font-size:46px;}
+.foot{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+.foot a{color:var(--gold);text-decoration:none;font-weight:600;font-size:14px;}
+.tagline{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;color:#475065;text-transform:uppercase;}
+</style>
 </head>
 <body>
+  <div class="wrap" id="card">
+    <img class="logo" src="./icon-512.png" alt="Lupo">
+    <div class="kicker">Lupo · Early Access</div>
+    <h1>Raise a wolf by <span class="g">beating your phone.</span></h1>
+    <p class="sub">A wolf you raise in real life. Stay under your screen-time limit and keep your habits. He grows from pup to legend. Slip, and he fades. Not an app. A standard.</p>
 
-<div id="splash">
-  <img src="icon-512.png" alt="Lupo" class="splash-logo">
-  <div class="splash-name">LUPO</div>
-  <div class="splash-tag">RAISE YOUR WOLF</div>
-</div>
+    <form id="form" novalidate>
+      <input class="email" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" required aria-label="Email address">
+      <button class="btn" id="btn" type="submit">JOIN THE PACK →</button>
+      <div class="proof"><span class="dot"></span><span id="proof">Be one of the first 100 to get in.</span></div>
+    </form>
 
-<div id="app">
-
-  <!-- ════════ ONBOARDING ════════ -->
-  <section class="screen onboarding" id="screen-onboarding" hidden>
-    <div class="ob-progress" role="group" aria-label="Setup progress">
-      <span class="ob-dot" data-d="0" aria-hidden="true"></span>
-      <span class="ob-dot" data-d="1" aria-hidden="true"></span>
-      <span class="ob-dot" data-d="2" aria-hidden="true"></span>
-    </div>
-    <button class="ob-skip" id="obSkip" type="button">Skip</button>
-
-    <!-- Page 0: Welcome -->
-    <div class="ob-page" data-page="0">
-      <div class="ob-wolf-wrap">
-        <div class="wolf-portrait"><div class="wolf-svg" id="wolfOnboard"></div></div>
-      </div>
-      <h1 class="ob-title">Meet Lupo.</h1>
-      <p class="ob-sub">A wolf you raise by earning it in real life. Stay consistent and he grows. Slip and he regresses. He expects more from you.</p>
-      <div class="ob-tag">NOT AN APP. A STANDARD.</div>
+    <div class="success" id="success">
+      <div class="em">🐺</div>
+      <div class="big">You're in the pack.</div>
+      <p class="sub">We'll email you the moment early access opens. Tell a friend who needs this.</p>
     </div>
 
-    <!-- Page 1: Name -->
-    <div class="ob-page" data-page="1" hidden>
-      <div class="ob-wolf-wrap small">
-        <div class="wolf-portrait sm"><div class="wolf-svg" id="wolfName"></div></div>
-      </div>
-      <h1 class="ob-title">Name your pup.</h1>
-      <p class="ob-sub">This is the wolf you answer to. Give him a name you won't want to let down.</p>
-      <input class="ob-input" id="petNameInput" type="text" maxlength="18" placeholder="Lupo" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Wolf name" enterkeyhint="next">
-      <div class="ob-hint" id="nameHint" hidden>Give your wolf a name to continue.</div>
-    </div>
-
-    <!-- Page 2: Choose habits -->
-    <div class="ob-page" data-page="2" hidden>
-      <h1 class="ob-title small">Choose your habits.</h1>
-      <p class="ob-sub">Screen time is always tracked. Pick the others you'll be held to. Every one you keep feeds the wolf.</p>
-      <div class="ob-habit-list" id="obHabitList"></div>
-    </div>
-
-    <div class="ob-footer">
-      <button class="btn-primary" id="obNext" type="button">CONTINUE</button>
-    </div>
-  </section>
-
-  <!-- ════════ MAIN APP ════════ -->
-  <main class="app-main" id="appMain" hidden>
-
-    <!-- HOME -->
-    <section class="screen scroll" id="screen-home">
-      <header class="home-top">
-        <div>
-          <div class="home-name" id="homeName">LUPO</div>
-          <div class="home-date" id="homeDate"></div>
-        </div>
-        <div class="streak-badge" id="streakBadge"><span class="flame" aria-hidden="true">🔥</span><span id="streakCount">0</span></div>
-      </header>
-
-      <p class="mood-msg" id="moodMsg"></p>
-
-      <div id="homeTimer"></div>
-
-      <div class="wolf-card">
-        <div class="wolf-breathe">
-          <div class="wolf-portrait"><div class="wolf-svg" id="wolfHome"></div></div>
-        </div>
-        <div class="stage-line" id="stageLine">STAGE 0 · NEWBORN PUP</div>
-        <div class="stage-tag" id="stageTag"></div>
-      </div>
-
-      <!-- Energy -->
-      <div class="meter">
-        <div class="meter-head">
-          <span class="meter-label">ENERGY</span>
-          <span class="meter-val" id="energyVal">50%</span>
-        </div>
-        <div class="meter-track"><div class="meter-fill energy" id="energyFill"></div></div>
-      </div>
-
-      <!-- Progress to next stage -->
-      <div class="meter" id="progressBlock">
-        <div class="meter-head">
-          <span class="meter-label" id="progressLabel">PROGRESS TO YOUNG PUP</span>
-          <span class="meter-val gold" id="progressDays">7 DAYS LEFT</span>
-        </div>
-        <div class="meter-track"><div class="meter-fill gold" id="progressFill"></div></div>
-      </div>
-
-      <!-- Quick habit row -->
-      <div class="quick-row" id="quickRow"></div>
-
-      <!-- CTA -->
-      <div id="homeCta"></div>
-
-      <div class="spacer-bottom"></div>
-    </section>
-
-    <!-- HABITS -->
-    <section class="screen scroll" id="screen-habits" hidden>
-      <header class="page-head">
-        <h2 class="page-title">TODAY</h2>
-        <div class="page-sub" id="habitsDate"></div>
-      </header>
-
-      <div class="banner" id="successBanner" hidden><span>🐺</span> Lupo fed for today</div>
-
-      <div id="habitsTimer"></div>
-
-      <div class="habit-list" id="habitList"></div>
-
-      <div class="completion-card">
-        <div class="meter-head">
-          <span class="meter-label">TODAY'S COMPLETION</span>
-          <span class="meter-val gold" id="completionPct">0%</span>
-        </div>
-        <div class="meter-track"><div class="meter-fill gold" id="completionFill"></div></div>
-      </div>
-
-      <button class="btn-primary" id="saveBtn" type="button">SAVE PROGRESS</button>
-      <div class="spacer-bottom"></div>
-    </section>
-
-    <!-- STATS -->
-    <section class="screen scroll" id="screen-stats" hidden>
-      <header class="page-head"><h2 class="page-title">STATS</h2></header>
-
-      <div class="stat-grid" id="statGrid"></div>
-
-      <div class="section-label">RECENT 14 DAYS</div>
-      <div class="heatmap" id="heatmap"></div>
-
-      <div class="section-label">THIS WEEK</div>
-      <div class="week-list" id="weekList"></div>
-      <div class="spacer-bottom"></div>
-    </section>
-
-    <!-- JOURNEY -->
-    <section class="screen scroll" id="screen-journey" hidden>
-      <header class="page-head"><h2 class="page-title">JOURNEY</h2><div class="page-sub" id="journeySub"></div></header>
-      <div class="journey-hero">
-        <div class="wolf-svg" id="wolfJourney"></div>
-        <div class="journey-level" id="journeyLevel">LV 0</div>
-        <div class="journey-tier" id="journeyTier"></div>
-        <div class="meter" style="width:100%;margin:14px 0 0;">
-          <div class="meter-head"><span class="meter-label" id="journeyNextLabel">NEXT FORM</span><span class="meter-val gold" id="journeyNextVal"></span></div>
-          <div class="meter-track"><div class="meter-fill gold" id="journeyFill"></div></div>
-        </div>
-      </div>
-      <div class="section-label">EVERY FORM</div>
-      <div class="tier-list" id="tierList"></div>
-      <div class="spacer-bottom"></div>
-    </section>
-
-    <!-- PROFILE -->
-    <section class="screen scroll" id="screen-profile" hidden>
-      <header class="page-head"><h2 class="page-title">PROFILE</h2></header>
-
-      <div class="section-label">YOUR WOLF</div>
-      <div class="info-card">
-        <div class="field-row">
-          <input class="field-input" id="renameInput" maxlength="18" placeholder="Lupo" autocomplete="off" aria-label="Wolf name">
-          <button class="mini-btn" id="renameBtn" type="button">SAVE</button>
-        </div>
-        <button class="mini-btn" id="shareBtn" type="button" style="margin-top:12px;width:100%;">SHARE YOUR WOLF</button>
-      </div>
-
-      <div class="section-label">ACHIEVEMENTS <span class="ach-count" id="achCount"></span></div>
-      <div class="ach-grid" id="achGrid"></div>
-
-      <div class="section-label">WOLF ART</div>
-      <div class="info-card">
-        <div class="ic-sub">Want a custom look? Add your own square image for each life stage and Lupo uses it instead, growing across the stages as you do.</div>
-        <div class="art-slots" id="artSlots"></div>
-        <button class="mini-btn ghost" id="clearArtBtn" type="button" style="margin-top:12px;">USE DRAWN WOLF</button>
-      </div>
-
-      <div class="section-label">HABITS</div>
-      <div class="manage-list" id="manageList"></div>
-
-      <div class="section-label">SCREEN TIME</div>
-      <div class="info-card">
-        <div class="ic-title">Auto-verification</div>
-        <div class="ic-sub">Lupo can read your real iPhone Screen Time and verify it automatically, but only in the native iOS app (Apple Family Controls). On the web you log it yourself for now. The native build is coming.</div>
-        <button class="mini-btn ghost" id="screenTimeBtn" type="button" disabled>NATIVE APP REQUIRED</button>
-      </div>
-
-      <div class="section-label">REMINDERS</div>
-      <div class="info-card">
-        <div class="toggle-row">
-          <div><div class="ic-title">Daily reminder</div><div class="ic-sub">An evening nudge if your wolf hasn't been fed. On iPhone, add Lupo to your home screen first to turn this on.</div></div>
-          <button class="switch" id="reminderToggle" type="button" aria-pressed="false" aria-label="Daily reminder"></button>
-        </div>
-      </div>
-
-      <div class="section-label">SOUND</div>
-      <div class="info-card">
-        <div class="toggle-row">
-          <div><div class="ic-title">Sound effects</div><div class="ic-sub">Taps, habit chimes, level-ups, and the daily fanfare.</div></div>
-          <button class="switch on" id="soundToggle" type="button" aria-pressed="true" aria-label="Sound effects"></button>
-        </div>
-      </div>
-
-      <div class="section-label">DANGER ZONE</div>
-      <button class="btn-ghost" id="resetBtn" type="button">RESET ALL PROGRESS</button>
-      <div class="about-line" id="aboutLine">Lupo · raise a wolf</div>
-      <div class="legal-line"><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></div>
-      <div class="spacer-bottom"></div>
-    </section>
-
-    <!-- TAB BAR -->
-    <nav class="tab-bar" id="tabBar">
-      <button class="tab active" data-screen="home" type="button">
-        <svg viewBox="0 0 24 24" class="tab-ico"><path d="M3 10.5L12 3L21 10.5V20C21 20.6 20.6 21 20 21H15V15H9V21H4C3.4 21 3 20.6 3 20V10.5Z"/></svg>
-        <span>HOME</span>
-      </button>
-      <button class="tab" data-screen="habits" type="button">
-        <svg viewBox="0 0 24 24" class="tab-ico stroke"><circle cx="12" cy="12" r="9"/><path d="M8 12L11 15L16 9" fill="none"/></svg>
-        <span>HABITS</span>
-      </button>
-      <button class="tab" data-screen="journey" type="button">
-        <svg viewBox="0 0 24 24" class="tab-ico stroke"><path d="M5 21V8M5 8l4-4 6 4 4-3"/><circle cx="5" cy="5.5" r="1.6" fill="currentColor" stroke="none"/></svg>
-        <span>JOURNEY</span>
-      </button>
-      <button class="tab" data-screen="stats" type="button">
-        <svg viewBox="0 0 24 24" class="tab-ico"><rect x="3" y="13" width="5" height="8" rx="1"/><rect x="9.5" y="8" width="5" height="13" rx="1"/><rect x="16" y="4" width="5" height="17" rx="1"/></svg>
-        <span>STATS</span>
-      </button>
-      <button class="tab" data-screen="profile" type="button">
-        <svg viewBox="0 0 24 24" class="tab-ico stroke"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="none"/></svg>
-        <span>PROFILE</span>
-      </button>
-    </nav>
-  </main>
-
-  <!-- STAGE-UP OVERLAY -->
-  <div class="stageup" id="stageUp" hidden>
-    <div class="stageup-inner">
-      <div class="stageup-kicker">STAGE UP</div>
-      <div class="wolf-portrait"><div class="wolf-svg" id="wolfStageUp"></div></div>
-      <div class="stageup-name" id="stageUpName"></div>
-      <div class="stageup-tag" id="stageUpTag"></div>
-      <button class="btn-primary narrow" id="stageUpBtn" type="button">CONTINUE</button>
+    <div class="foot">
+      <a href="https://instagram.com/raiselupo" target="_blank" rel="noopener">Follow @raiselupo on all socials</a>
+      <div class="tagline">Not an app. A standard.</div>
     </div>
   </div>
 
-  <!-- DAY COMPLETE OVERLAY -->
-  <div class="stageup" id="dayComplete" hidden>
-    <div class="stageup-inner">
-      <div class="oc-emoji" aria-hidden="true">🎉</div>
-      <div class="stageup-kicker" style="font-size:34px;letter-spacing:3px;">GOOD JOB</div>
-      <div class="oc-title" id="dayCompleteMsg">Day complete.</div>
-      <div class="stageup-tag" id="dayCompleteSub">Your wolf grew today.</div>
-      <button class="btn-primary narrow" id="dayCompleteBtn" type="button">NICE</button>
-    </div>
-  </div>
-
-  <!-- STREAK MILESTONE OVERLAY -->
-  <div class="stageup" id="streakUp" hidden>
-    <div class="stageup-inner">
-      <div class="streak-big"><span class="streak-flame" aria-hidden="true">🔥</span><span id="streakUpNum">7</span></div>
-      <div class="stageup-kicker" id="streakUpTitle" style="font-size:26px;letter-spacing:3px;">DAY STREAK</div>
-      <div class="stageup-tag" id="streakUpSub">Keep the fire alive.</div>
-      <button class="btn-primary narrow" id="streakUpBtn" type="button">KEEP GOING</button>
-    </div>
-  </div>
-
-  <!-- FIRST-RUN TUTORIAL -->
-  <div class="stageup" id="tutorial" hidden>
-    <div class="stageup-inner">
-      <div class="wolf-svg tut-wolf" id="tutWolf"></div>
-      <div class="tut-step" id="tutStep">1 / 4</div>
-      <div class="oc-title" id="tutTitle"></div>
-      <div class="stageup-tag" id="tutBody"></div>
-      <button class="btn-primary narrow" id="tutNext" type="button">NEXT</button>
-    </div>
-  </div>
-
-  <div id="grain" aria-hidden="true"></div>
-
-</div>
-
-<script src="sound.js"></script>
-<script src="app.js"></script>
 <script>
-  if ('serviceWorker' in navigator) {
-    // Auto-apply new builds: when a fresh service worker takes control, reload once so
-    // an installed (home-screen) PWA never gets stuck showing a stale cached version.
-    var _hadController = !!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!_hadController) return; // first install claims with no prior controller; don't reload on it
-      if (sessionStorage.getItem('lupoSwReloaded')) return; // at most one reload per tab session
-      try { sessionStorage.setItem('lupoSwReloaded', '1'); } catch (e) {}
-      window.location.reload();
-    });
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').then((reg) => {
-        if (!reg) return;
-        reg.update();
-        setInterval(() => reg.update(), 15 * 60 * 1000);
-        // every time the app comes back to the foreground, check for a newer build and auto-apply it,
-        // so a tab/home-screen app left open never stays on a stale version (no manual cache clearing needed)
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update(); });
-      }).catch(() => {});
-    });
+  // Signups land in two places: a Google Sheet (Apps Script web app, the live list)
+  // and chleb@chleb.ai via Formsubmit as a backup. Formsubmit needs a one-time
+  // activation click on its first email before those start arriving.
+  const ENDPOINT = "https://formsubmit.co/ajax/chleb@chleb.ai";
+  const SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbzTeM_MFZhi3jcDXmlLca2GKsmGuZLWL2_Oxc2rnQ77MtZzTCYxA-w5uNq7kLSS1qDnLA/exec";
+
+  const form = document.getElementById('form');
+  const btn = document.getElementById('btn');
+  const emailEl = document.getElementById('email');
+
+  function showSuccess(){
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('success').style.display = 'flex';
   }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = emailEl.value.trim();
+    if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ emailEl.focus(); emailEl.style.borderColor = '#F2685A'; return; }
+    btn.disabled = true; btn.textContent = 'JOINING…';
+    // local fallback so nothing is lost
+    try { const k='lupo.waitlist'; const arr=JSON.parse(localStorage.getItem(k)||'[]'); arr.push({email,ts:Date.now()}); localStorage.setItem(k,JSON.stringify(arr)); } catch(_){}
+    // append to the Google Sheet. no-cors + text/plain so Apps Script gets the raw
+    // JSON body with no CORS preflight (which it cannot answer); we do not need to read the reply
+    try{ fetch(SHEET_ENDPOINT, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({ email }) }); }catch(_){}
+    try{
+      await fetch(ENDPOINT, {
+        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body: JSON.stringify({ email, _subject:'New Lupo waitlist signup', _template:'table' })
+      });
+    }catch(_){}
+    showSuccess();
+  });
 </script>
 </body>
 </html>

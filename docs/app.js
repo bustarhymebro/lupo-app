@@ -55,7 +55,7 @@ function targetShort(k){ const t=habitTarget(k),u=HABITS[k].unit; return u==='cu
 function adjustTarget(k,d){ const h=HABITS[k]; let t=habitTarget(k)+d*h.step; t=Math.round(t/h.step)*h.step; t=Math.max(h.min,Math.min(h.max,t)); state.habits[k].target=t; save(); }
 
 // ── State ──
-const BUILD = '51'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
+const BUILD = '52'; // internal version, kept in sync with sw.js CACHE (no longer shown in the UI)
 const STORE_KEY = 'lupo.v2';
 const ART_KEY = 'lupo.v2.art'; // bulky uploaded wolf art lives apart so it never crowds out the tiny streak data
 let state = null;
