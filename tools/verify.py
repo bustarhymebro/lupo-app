@@ -191,6 +191,8 @@ def main():
         assert st["xp"] == 2700, f"migrated xp 30*90: {st['xp']}"
         assert st["limitMin"] == 120, f"migrated limit: {st['limitMin']}"
         assert st["onboarded"] is True, "migration skips onboarding"
+        lvl = page.evaluate("async () => (await import('./js/xp.js')).levelForXp(2700)")
+        assert st["seenLevel"] == lvl, f"migration syncs seenLevel: {st['seenLevel']} vs {lvl}"
 
         browser.close()
 

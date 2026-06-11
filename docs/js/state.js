@@ -2,6 +2,8 @@
 //  LUPO state — persistence, defaults, v2→v3 migration, 4 AM clock.
 // ═══════════════════════════════════════════════════════
 
+import { levelForXp } from './xp.js';
+
 export const STORE_KEY = 'lupo.v3';
 const LEGACY_KEY = 'lupo.v2';
 const LEGACY_ART_KEY = 'lupo.v2.art';
@@ -145,6 +147,7 @@ function migrateFromV2() {
   state.onboarded = !!old.onboarded;
   state.migratedFromV2 = true;
   state.welcomedBack = false;
+  state.seenLevel = levelForXp(state.xp); // carried-over levels were already lived, not new milestones
   // never roll back through the user's old history — start the engine today
   state.lastSeenDay = dayKey();
   save();

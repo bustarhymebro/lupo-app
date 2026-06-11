@@ -68,15 +68,18 @@ export async function buildCard() {
   ctx.font = '700 52px Nunito, system-ui, sans-serif';
   ctx.fillText(`${XP.rankTitle(L, state.cycle).toUpperCase()} · ${XP.phaseForLevel(L).toUpperCase()}`, W / 2, 1082);
 
-  // stat chips
+  // stat chips, centered as a pair
   const chips = [
     [`LEVEL ${L}`, '#F5A623'],
     [`🔥 ${state.streak} DAY STREAK`, '#FFFFFF'],
   ];
   ctx.font = '800 40px Nunito, system-ui, sans-serif';
-  let cx = W / 2 - 250;
-  for (const [label, color] of chips) {
-    const tw = ctx.measureText(label).width + 64;
+  const GAP = 26;
+  const widths = chips.map(([label]) => ctx.measureText(label).width + 64);
+  let cx = (W - widths.reduce((a, b) => a + b, 0) - GAP * (chips.length - 1)) / 2;
+  for (let i = 0; i < chips.length; i++) {
+    const [label, color] = chips[i];
+    const tw = widths[i];
     roundRect(ctx, cx, 1130, tw, 86, 43);
     ctx.fillStyle = 'rgba(255,255,255,.07)';
     ctx.fill();

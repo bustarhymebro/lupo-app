@@ -160,23 +160,28 @@ function renderWolfScreen() {
   const stage = XP.stageForLevel(L);
 
   // next milestone teaser
-  const next5 = Math.min(XP.MAX_LEVEL, (Math.floor(L / 5) + 1) * 5);
-  const xpTo5 = XP.THRESHOLDS[next5] - state.xp;
-  const eta = Math.max(1, Math.ceil(xpTo5 / 100));
-  const kind = XP.milestoneKind(next5);
-  const teaser = kind === 'rank' ? `Rank promotion at LV ${next5}` : kind === 'cosmetic' ? `${(XP.cosmeticAt(next5) || {}).name || 'Unlock'} at LV ${next5}` : `Milestone at LV ${next5}`;
+  let teaser, eta = 0;
+  if (L >= XP.MAX_LEVEL) {
+    teaser = 'The road is fully walked. A New Moon Cycle waits in Journey.';
+  } else {
+    const next5 = Math.min(XP.MAX_LEVEL, (Math.floor(L / 5) + 1) * 5);
+    eta = Math.max(1, Math.ceil((XP.THRESHOLDS[next5] - state.xp) / 100));
+    const kind = XP.milestoneKind(next5);
+    teaser = kind === 'rank' ? `Rank promotion at LV ${next5}` : kind === 'cosmetic' ? `${(XP.cosmeticAt(next5) || {}).name || 'Unlock'} at LV ${next5}` : `Milestone at LV ${next5}`;
+  }
 
   let cta;
+  const feedName = state.name.length > 9 ? 'YOUR WOLF' : state.name.toUpperCase();
   if (sum.rest) {
     cta = `<div class="rest-chip">🌿 Rest day. ${esc(state.name)} is recharging with you.</div>`;
   } else if (!sum.checkin) {
-    cta = `<button class="btn-primary feed" id="feedBtn" type="button">FEED ${esc(state.name.toUpperCase())} <span class="xp-pill">+${XP.XP_CHECKIN} XP</span></button>`;
+    cta = `<button class="btn-primary feed" id="feedBtn" type="button">FEED ${esc(feedName)} <span class="xp-pill">+${XP.XP_CHECKIN} XP</span></button>`;
   } else if (sum.under === null) {
     cta = `<button class="btn-primary" id="goToday" type="button">LOG TODAY'S SCREEN TIME <span class="xp-pill">+${sum.nextUnderXp} XP</span></button>`;
   } else if (sum.under === true) {
-    cta = `<div class="kept-chip">✅ Line held. ${sum.huntOut ? esc(state.name) + ' is out hunting tonight.' : 'Day complete.'}</div>`;
+    cta = `<div class="kept-chip">✅ Line held. ${sum.huntOut ? esc(state.name) + ' hunts tonight. See what he brings back tomorrow.' : 'Day complete.'}</div>`;
   } else {
-    cta = `<div class="over-chip">Today went over. It happens — the wolf waits, levels are banked. Tomorrow is a clean page.</div>`;
+    cta = `<div class="over-chip">Today went over. It happens. The wolf waits, the levels stay banked, and tomorrow is a clean page.</div>`;
   }
 
   el.innerHTML = `
@@ -191,9 +196,8 @@ function renderWolfScreen() {
         <span class="meter-val gold">${L >= XP.MAX_LEVEL ? 'MOONBORN' : prog.have + ' / ' + prog.need + ' XP'}</span>
       </div>
       <div class="meter-track"><div class="meter-fill gold" style="width:${Math.round(prog.pct * 100)}%"></div></div>
-      <div class="meter-foot">${esc(teaser)} · ≈${eta} day${eta === 1 ? '' : 's'} away</div>
+      <div class="meter-foot">${esc(teaser)}${eta ? ` · ≈${eta} day${eta === 1 ? '' : 's'} away` : ''}</div>
     </div>
-    ${sum.huntOut ? `<div class="hunt-line">🌙 ${esc(state.name)} leaves on a hunt tonight. See what he brings back tomorrow.</div>` : ''}
     <div class="cta-slot">${cta}</div>
     <div class="spacer-bottom"></div>`;
 
@@ -239,7 +243,7 @@ function renderTodayScreen() {
   } else if (sum.under === true) {
     underBlock = `<div class="kept-chip">✅ Logged: you stayed under ${fmtMin(state.limitMin)} today. ${esc(state.name)} hunts tonight.</div>`;
   } else if (sum.under === false) {
-    underBlock = `<div class="over-chip">Logged: over the limit today. No guilt — growth pauses, nothing is lost.</div>`;
+    underBlock = `<div class="over-chip">Logged: over the limit today. No guilt. Growth pauses, nothing is lost.</div>`;
   } else {
     underBlock = `
       <div class="log-q">Did you stay under <b>${fmtMin(state.limitMin)}</b> today?</div>
@@ -502,7 +506,7 @@ function openSettings() {
   `, (wrap, close) => {
     $('[data-act="rename"]', wrap).onclick = () => {
       const v = $('#renameInput', wrap).value.trim().slice(0, 18);
-      if (v) { state.name = v; save(); Sound.tap(); toast(`He answers to <b>${esc(v)}</b> now.`); renderHeader(); }
+      if (v) { state.name = v; save(); Sound.tap(); toast(`He answers to <b>${esc(v)}</b> now.`); renderAll(); }
     };
     $('[data-act="sound"]', wrap).onclick = (e) => {
       state.sound = !state.sound; save();
@@ -530,6 +534,7 @@ let obData = { intent: null, limit: 180, name: '' };
 
 const OB_STEPS = [
   () => `
+    <div class="ob-wolf"><img src="assets/wolf/painted-cut-0.png" alt="" class="ob-wolf-img"></div>
     <h1 class="ob-title">What brings you<br>to the den?</h1>
     <div class="intent-list">
       <button class="intent-card ${obData.intent === 'doomscrolling' ? 'sel' : ''}" data-intent="doomscrolling" type="button">📱 I doomscroll too much</button>
@@ -666,7 +671,7 @@ export function init() {
     else celebrateMicro(level);
   });
   engine.on('freeze', ({ left }) => toast(`🧊 A streak freeze kept the fire warm. ${left} left this month.`, 4500));
-  engine.on('streaklost', () => toast(`The streak rests at zero — your levels don't. ${esc(state.name)} is still here.`, 4500));
+  engine.on('streaklost', () => toast(`The streak rests at zero. Your levels don't. ${esc(state.name)} is still here.`, 4500));
   engine.on('discovery', () => {});
   engine.on('daychange', () => renderAll());
 

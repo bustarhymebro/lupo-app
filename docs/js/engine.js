@@ -55,6 +55,10 @@ export function rollDays() {
     }
     cursor = addDaysKey(cursor, 1);
   }
+  // keep the history bounded: anything older than 120 days has served its purpose
+  const cutoff = addDaysKey(tk, -120);
+  for (const k of Object.keys(state.days)) if (k < cutoff) delete state.days[k];
+
   state.lastSeenDay = tk;
   save();
   if (usedFreeze) emit('freeze', { left: state.freezes });
@@ -217,6 +221,7 @@ export function wolfMood() {
   const rec = state.days[today()];
   if (rec && rec.rest) return 'resting';
   if (rec && rec.under === true) return 'proud';
+  if (rec && rec.under === false) return 'waiting'; // an honest over-day: he waits, no celebration
   if (rec && rec.checkin) return 'happy';
   // how long since the wolf was last fed anything?
   let last = null;
