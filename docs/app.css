@@ -88,7 +88,8 @@ body[data-env="env-cosmos"]   { background: linear-gradient(180deg, #0A0B1E 0%, 
 .wolf-card {
   background: radial-gradient(120% 90% at 50% 0%, var(--surface2) 0%, var(--surface) 70%);
   border: 1px solid var(--border); border-radius: var(--r-lg);
-  padding: 18px 16px 16px; text-align: center; position: relative; overflow: hidden;
+  padding: 18px 16px 16px; text-align: center; position: relative;
+  /* no overflow:hidden — a bouncing wolf must never get his ears clipped */
 }
 .wolf-card[data-frame="frame-bronze"] { border-color: #8C5A2B; box-shadow: inset 0 0 0 1px #8C5A2B44; }
 .wolf-card[data-frame="frame-silver"] { border-color: #9BA3AF; box-shadow: inset 0 0 0 1px #9BA3AF44; }
@@ -99,7 +100,12 @@ body[data-env="env-cosmos"]   { background: linear-gradient(180deg, #0A0B1E 0%, 
 
 .wolf-stage { position: relative; width: min(64vw, 280px); margin: 0 auto; aspect-ratio: 1; }
 .wolf-body { position: relative; width: 100%; height: 100%; transform-origin: center bottom; animation: breathe 3.6s ease-in-out infinite; }
-.wolf-img { width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 14px 22px rgba(0,0,0,.55)); }
+.wolf-img {
+  width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none;
+  filter: drop-shadow(0 14px 22px rgba(0,0,0,.55));
+  /* slight shrink from the bottom = permanent headroom, so idle/mood motion never crops the ears */
+  transform: scale(.94); transform-origin: center bottom;
+}
 .wolf-zzz { position: absolute; top: 4%; right: 6%; font-size: 26px; animation: zzz 2.6s ease-in-out infinite; }
 
 .wolf-aura { position: absolute; inset: -6%; border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity .8s ease; }
@@ -111,9 +117,9 @@ body[data-env="env-cosmos"]   { background: linear-gradient(180deg, #0A0B1E 0%, 
 .wolf-aura[data-aura="aura-spectral"] { opacity: 1; background: radial-gradient(closest-side, #94E2D544 0%, transparent 70%); }
 .wolf-aura[data-aura="aura-mythic"]   { opacity: 1; background: conic-gradient(from 0deg, #F5A62322, #A78BFA22, #7DD3FC22, #F5A62322); border-radius: 50%; filter: blur(8px); }
 
-/* mood treatments */
+/* mood treatments — use the translate property so the headroom scale() is never overridden */
 .wolf-stage[data-mood="drooping"] .wolf-img,
-.wolf-stage[data-mood="lonely"] .wolf-img { filter: grayscale(.55) brightness(.82) drop-shadow(0 14px 22px rgba(0,0,0,.55)); transform: translateY(3%); }
+.wolf-stage[data-mood="lonely"] .wolf-img { filter: grayscale(.55) brightness(.82) drop-shadow(0 14px 22px rgba(0,0,0,.55)); translate: 0 3%; }
 .wolf-stage[data-mood="resting"] .wolf-img { filter: brightness(.75) drop-shadow(0 14px 22px rgba(0,0,0,.55)); }
 .wolf-stage[data-mood="proud"] .wolf-img { filter: drop-shadow(0 0 18px #F5A62333) drop-shadow(0 14px 22px rgba(0,0,0,.55)); }
 
