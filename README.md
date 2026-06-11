@@ -1,8 +1,22 @@
-# Lupo — iOS App
+# Lupo
 
-A dark, premium habit + discipline app. Raise a wolf pup through 5 growth stages by maintaining your real-world habits.
+A dark, premium screen-time discipline app. Raise a wolf through 500 permanent micro-levels by staying under your daily screen-time limit. Levels never reset, the wolf never dies.
 
 Bundle ID: `com.chlebholdings.lupo`
+
+## Web PWA (`docs/`, live at raiselupo.chleb.ai)
+
+The shipping product. Vanilla JS ES modules, no build step, GitHub Pages from `docs/`. The waitlist is the homepage (`index.html`); the app lives at `/app.html`.
+
+- `js/xp.js` — logistic XP curve (`stepCost`), 500-level threshold cache, stages/ranks/moon phases, milestone + cosmetics catalogs
+- `js/state.js` — `lupo.v3` localStorage persistence, 4 AM day-roll clock, one-time `lupo.v2` migration
+- `js/engine.js` — daily XP budget (+20 check-in, +50 under-limit × streak multiplier, +10×3 habits, 180/day cap), streak freezes (3/month), rest days, overnight hunts with variable discoveries, prestige cycles
+- `js/wolf.js` / `js/ui.js` / `js/confetti.js` / `js/sharecard.js` — living wolf (idle fidgets, moods, evolution ceremony), four tabs (Wolf / Today / Journey / Den), celebrations, canvas share cards
+- `tools/verify.py` — Playwright smoke test: walks onboarding + the full daily loop, asserts engine math, writes screenshots to `tools/shots/`
+
+Deploy = push to `main`, then bump `CACHE` in `docs/sw.js`. Product spec: `docs/STRATEGY.md` (decisions locked).
+
+## Native iOS (`Lupo/`, scaffold)
 
 ---
 
@@ -259,10 +273,12 @@ Before submitting to TestFlight:
 
 ## Wolf Growth Stages
 
-| Stage | Name | Days Required |
+| Stage | Name | Levels |
 |---|---|---|
-| 0 | Newborn Pup | 0 |
-| 1 | Young Pup | 7 |
-| 2 | Adolescent | 14 |
-| 3 | Sub-Adult | 28 |
-| 4 | Adult Wolf | 42 |
+| 0 | Newborn Pup | 1–10 |
+| 1 | Young Pup | 11–40 |
+| 2 | Adolescent | 41–120 |
+| 3 | Sub-Adult | 121–300 |
+| 4 | Adult Wolf | 301–500 |
+
+Ranks every 100 levels: Whelp → Yearling → Hunter → Alpha → Moonborn. Moon-phase sub-tiers every 25. Prestige ("New Moon Cycle") at 500.

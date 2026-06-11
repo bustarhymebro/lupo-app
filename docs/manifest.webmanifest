@@ -1,14 +1,14 @@
 {
-  "name": "Lupo: Raise Your Wolf",
+  "name": "Lupo: Raise a Wolf, Beat Screen Time",
   "short_name": "Lupo",
-  "description": "A discipline tracker, not just an app. Raise a wolf by keeping your real-world habits.",
+  "description": "Raise a wolf by staying off your phone. Levels never reset. The wolf never dies.",
   "id": "/",
   "start_url": "./app.html",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#121726",
-  "theme_color": "#121726",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0A0A0A",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

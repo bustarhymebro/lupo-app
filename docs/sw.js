@@ -1,15 +1,23 @@
 // Lupo service worker. Network-first for same-origin (always serve the latest build), cache fallback when offline.
-// Keep CACHE here in sync with BUILD in app.js on every deploy.
-const CACHE = 'lupo-v53';
+// Bump CACHE on every deploy.
+const CACHE = 'lupo-v54';
 const ASSETS = [
   './',
   './index.html',
   './app.html',
-  './styles.css',
+  './app.css',
   './sound.js',
-  './app.js',
+  './js/main.js',
+  './js/state.js',
+  './js/xp.js',
+  './js/engine.js',
+  './js/ui.js',
+  './js/wolf.js',
+  './js/confetti.js',
+  './js/sharecard.js',
   './privacy.html',
   './terms.html',
+  './support.html',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
