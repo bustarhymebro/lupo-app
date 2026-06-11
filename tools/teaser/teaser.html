@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lupo teaser</title>
+<style>
+  /* 10s no-UI teaser: hook line → wolf grows pup→adult → wordmark. Nothing from the app leaks. */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0A0A0A; }
+  body { font-family: 'Nunito', system-ui, sans-serif; color: #fff; }
+  #stage { position: relative; width: 100vw; height: 100vh; display: grid; place-items: center;
+    background: radial-gradient(90% 55% at 50% 18%, #161B2E 0%, #0A0A0A 62%); }
+
+  .star { position: absolute; background: #fff; border-radius: 50%; opacity: 0;
+    animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity: .12; } 50% { opacity: .6; } }
+
+  #moon { position: absolute; top: 9%; left: 50%; width: 240px; height: 240px; transform: translateX(-50%);
+    border-radius: 50%; background: radial-gradient(closest-side, rgba(244,236,216,.32) 0%, rgba(244,236,216,.10) 45%, transparent 72%);
+    animation: moonin 2.4s ease-out both; }
+  @keyframes moonin { from { opacity: 0; } to { opacity: 1; } }
+
+  .line { position: absolute; width: 100%; text-align: center; left: 0; padding: 0 7%;
+    font-weight: 900; letter-spacing: .4px; opacity: 0; }
+  #hook { top: 40%; font-size: 56px; line-height: 1.3;
+    animation: inout 3.1s ease both; animation-delay: .35s; }
+  #hook small { display: block; margin-top: 18px; font-size: 30px; color: #A0A0A0; font-weight: 700; }
+  @keyframes inout {
+    0% { opacity: 0; transform: translateY(14px); }
+    16%, 78% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+  }
+
+  #wolves { position: absolute; inset: 0; display: grid; place-items: center; }
+  .wolf { position: absolute; height: 54vh; width: 80vw; object-fit: contain; opacity: 0;
+    filter: drop-shadow(0 0 60px rgba(245,166,35,.22)) drop-shadow(0 30px 40px rgba(0,0,0,.6)); }
+  /* each form fades in over the last; gentle rise + scale sells growth */
+  #w0 { animation: form 2.3s ease both; animation-delay: 3.2s; }
+  #w1 { animation: form 2.3s ease both; animation-delay: 5.4s; }
+  #w2 { animation: formhold 4.4s ease both; animation-delay: 7.6s; }
+  @keyframes form {
+    0% { opacity: 0; transform: scale(.96) translateY(12px); }
+    20%, 80% { opacity: 1; transform: scale(1) translateY(0); }
+    100% { opacity: 0; transform: scale(1.03) translateY(-8px); }
+  }
+  @keyframes formhold {
+    0% { opacity: 0; transform: scale(.96) translateY(12px); }
+    30% { opacity: 1; transform: scale(1) translateY(0); }
+    62% { opacity: 1; transform: scale(1.04); }
+    100% { opacity: 0; transform: scale(1.06); }
+  }
+  #grows { top: 78%; font-size: 34px; color: #F5A623; letter-spacing: 3px;
+    animation: inout 8.6s ease both; animation-delay: 3.4s; }
+
+  #outro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; opacity: 0; animation: outro 2.6s ease both; animation-delay: 11.5s; }
+  @keyframes outro { from { opacity: 0; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+  #outro img { width: 170px; height: 170px; border-radius: 38px; box-shadow: 0 0 70px rgba(245,166,35,.25); }
+  #outro h1 { font-size: 64px; letter-spacing: 16px; margin-top: 10px; font-weight: 900; }
+  #outro .tag { font-size: 26px; letter-spacing: 6px; color: #A0A0A0; font-weight: 800; }
+  #outro .cta { margin-top: 26px; font-size: 27px; color: #F5A623; font-weight: 900; letter-spacing: 1px; }
+
+  #grain { position: absolute; inset: 0; pointer-events: none; opacity: .05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="moon"></div>
+  <div id="hook" class="line">Every habit app<br>dies in a week.<small>Nobody ever loved a checklist.</small></div>
+  <div id="wolves">
+    <img class="wolf" id="w0" src="../../docs/assets/wolf/painted-cut-0.png" alt="">
+    <img class="wolf" id="w1" src="../../docs/assets/wolf/painted-cut-2.png" alt="">
+    <img class="wolf" id="w2" src="../../docs/assets/wolf/painted-cut-4.png" alt="">
+  </div>
+  <div id="grows" class="line">KEEP YOUR HABITS. HE GROWS.</div>
+  <div id="outro">
+    <img src="../../docs/icon-512.png" alt="">
+    <h1>LUPO</h1>
+    <div class="tag">THE LAST HABIT TRACKER<br>YOU'LL EVER DOWNLOAD</div>
+    <div class="cta">Early access soon · raiselupo.chleb.ai</div>
+  </div>
+  <div id="grain"></div>
+</div>
+<script>
+  // deterministic star field (no Math.random at record time keeps takes identical)
+  const seeds = [[8,12],[22,7],[38,16],[55,9],[70,13],[84,6],[15,26],[47,24],[78,28],[31,33],[63,35],[90,31],[12,52],[88,55],[50,4]];
+  for (const [x, y] of seeds) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = 2 + ((x * y) % 3);
+    s.style.cssText = `left:${x}vw;top:${y}vh;width:${sz}px;height:${sz}px;animation-delay:${(x % 7) * .4}s`;
+    document.getElementById('stage').appendChild(s);
+  }
+</script>
+</body>
+</html>
