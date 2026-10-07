@@ -40,7 +40,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 canvas{display:block;}
 
 .screen{position:absolute;inset:0;z-index:2;}
-.scroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.scroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  /* clear the fixed tab bar (66px + safe area): without this the last element
+     (the LOG TODAY CTA on Home) renders under the bar and center-taps hit the
+     bar's nav icons instead of the button */
+  padding-bottom:calc(84px + var(--safe-bot));box-sizing:border-box;}
 .scroll::-webkit-scrollbar{display:none;}
 .spacer-bottom{height:130px;}
 
@@ -149,6 +153,11 @@ canvas{display:block;}
 .cta-done{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 18px;padding:18px;border-radius:18px;
   color:var(--gold);font-size:14px;font-weight:700;background:var(--gold-dim);border:1px solid rgba(245,166,35,0.25);}
 .cta-log{display:block;width:auto;min-width:200px;max-width:300px;margin:18px auto 0;padding:0 44px;}
+/* #homeCta (the CTA's wrapper) is sticky above the fixed tab bar: at rest AND
+   while scrolling, the primary action stays fully visible instead of rendering
+   under the bar where center-taps silently hit the nav icons (launch blocker).
+   Sticky must live on the wrapper: the button alone is caged by this parent. */
+#homeCta{position:sticky;bottom:calc(66px + var(--safe-bot) + 12px);z-index:5;}
 /* inline goal steppers on each habit card so you can tune sleep/focus/workout right where you see them */
 .habit-card-target.adj{display:flex;align-items:center;gap:10px;margin-top:5px;}
 .ht-step{width:30px;height:30px;border-radius:9px;background:var(--card3);border:1px solid var(--gray3);color:var(--gold);font-size:17px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .1s;}
