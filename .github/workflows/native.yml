@@ -9,16 +9,28 @@ on:
         description: 'Optional XCTest identifier for a focused diagnostic run'
         required: false
         type: string
+      modern_storekit:
+        description: 'Download and check the iOS 26.6 StoreKit runtime on macOS 26'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
   native:
-    runs-on: macos-15
-    timeout-minutes: 30
+    runs-on: ${{ inputs.modern_storekit && 'macos-26' || 'macos-15' }}
+    timeout-minutes: ${{ inputs.modern_storekit && 45 || 30 }}
+    env:
+      DEVELOPER_DIR: ${{ inputs.modern_storekit && '/Applications/Xcode_26.6.app/Contents/Developer' || '/Applications/Xcode_16.4.app/Contents/Developer' }}
+      TEST_IOS_VERSION: ${{ inputs.modern_storekit && '26.6' || '18.5' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare modern StoreKit simulator
+        if: ${{ inputs.modern_storekit }}
+        working-directory: native
+        run: python3 tools/prepare-storekit-simulator.py
       - name: Test game rules
         working-directory: native
         run: swift test -j 2
