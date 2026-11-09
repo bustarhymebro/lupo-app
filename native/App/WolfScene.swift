@@ -52,8 +52,14 @@ struct WolfScene: View {
                     .frame(width: 128, height: 16).blur(radius: 8).offset(y: 120)
                 artwork("wolf-\(stage.lowercased())").resizable().scaledToFit()
                     .frame(width: max(0, min(geometry.size.width - 48, 290)), height: 270)
-                    .scaleEffect(response && !reduceMotion ? 1.035 : breathing && !reduceMotion ? 1.012 : 1, anchor: .bottom)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: breathing)
+                    // Scope motion to these transforms. A repeating animation on
+                    // the whole image also animates its initial geometry/layout.
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 2.8).repeatForever(autoreverses: true)) { content in
+                        content.scaleEffect(breathing && !reduceMotion ? 1.012 : 1, anchor: .bottom)
+                    }
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.22)) { content in
+                        content.scaleEffect(response && !reduceMotion ? 1.025 : 1, anchor: .bottom)
+                    }
                     .rotationEffect(.degrees(nourishment < 25 ? -3 : 0), anchor: .bottom)
                     .saturation(nourishment < 25 ? 0.75 : 1)
                     .offset(y: 8)
@@ -67,8 +73,8 @@ struct WolfScene: View {
         .onChange(of: reduceMotion) { _, reduced in breathing = !reduced }
         .onChange(of: nourishment) { old, new in
             if new > old && !reduceMotion {
-                withAnimation(.easeOut(duration: 0.22)) { response = true }
-                Task { try? await Task.sleep(for: .milliseconds(350)); withAnimation(.easeOut(duration: 0.22)) { response = false } }
+                response = true
+                Task { try? await Task.sleep(for: .milliseconds(350)); response = false }
             }
         }
     }
