@@ -9,13 +9,16 @@ import AppKit
 struct LupoRebornApp: App {
     @StateObject private var store = LupoStore()
     @StateObject private var membership = Membership()
+    @StateObject private var reminders = ReminderService()
     @Environment(\.scenePhase) private var scenePhase
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(store).environmentObject(membership)
+            RootView().environmentObject(store).environmentObject(membership).environmentObject(reminders)
+                .task { await reminders.synchronize(store.state) }
+                .onChange(of: store.state) { _, state in Task { await reminders.synchronize(state) } }
                 .task {
                     while !Task.isCancelled {
-                        if store.game.clock.key(Date()) != store.state.lastDay { store.apply { try $0.open(at: Date()) } }
+                        if GameClock().key(Date()) > store.state.lastDay { store.apply { try $0.open(at: Date()) } }
                         do { try await Task.sleep(for: .seconds(30)) } catch { return }
                     }
                 }
@@ -80,6 +83,8 @@ struct RootView: View {
 
 struct Screen<Content: View>: View {
     let title: String
+    var showsClose = false
+    @Environment(\.dismiss) private var dismiss
     @ViewBuilder var content: () -> Content
     var body: some View {
         NavigationStack {
@@ -87,6 +92,7 @@ struct Screen<Content: View>: View {
                 VStack(alignment: .leading, spacing: 24, content: content)
                     .frame(maxWidth: 560).padding(20).frame(maxWidth: .infinity)
             }.background(Theme.background).navigationTitle(title).buttonStyle(TouchButtonStyle())
+            .toolbar { if showsClose { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } } }
         }
     }
 }
@@ -166,6 +172,7 @@ struct HomeView: View {
     @EnvironmentObject var store: LupoStore
     @EnvironmentObject var membership: Membership
     @State private var focusOpen = false
+    @State private var showingTrails = false
     var body: some View {
         Screen(title: store.state.name) {
             HStack {
@@ -196,20 +203,25 @@ struct HomeView: View {
                 HStack { Text("Today's small wins").font(.headline); Spacer(); Text("\(store.day.completed.count)/\(store.day.scheduled.count)").monospacedDigit() }
                 if store.day.rest { Label("Rest day. The trail can wait.", systemImage: "moon.zzz") }
                 else if store.day.scheduled.isEmpty { Text("No goals scheduled today. Enjoy the space.").foregroundStyle(.secondary) }
-                else { ForEach(store.day.scheduled) { habit in GoalRow(habit: habit) } }
+                else {
+                    ForEach(store.day.scheduled) { habit in
+                        Label(habit.title, systemImage: store.day.completed.contains(habit.id) ? "checkmark.circle.fill" : "circle")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .accessibilityLabel("\(habit.title), \(store.day.completed.contains(habit.id) ? "completed" : "not yet completed")")
+                    }
+                    Text("Manage your routine in Today.").font(.caption).foregroundStyle(.secondary)
+                }
             }.padding(18).background(Theme.panel, in: RoundedRectangle(cornerRadius: 22))
             Button { focusOpen = true } label: {
                 Label(store.state.focus == nil ? "Make room for a little focus" : "Return to your focus session", systemImage: "timer").frame(maxWidth: .infinity).padding()
             }.buttonStyle(.bordered)
+            Button(store.state.trail == nil ? "Find a guided trail" : "Continue your guided trail", systemImage: "leaf") { showingTrails = true }
             if let found = store.day.expedition {
                 Label(found, systemImage: "sparkles").padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 18))
-            } else {
-                Button("Explore the trail", systemImage: "map") {
-                    store.apply { game in _ = try game.explore(at: Date()) }
-                }.disabled(store.day.completed.isEmpty || store.state.nourishment < 25 || store.day.rest)
+            } else if store.day.completed.isEmpty || store.state.nourishment < 25 {
                 Text("Complete a goal and keep nourishment at 25 or more to discover today's trail.").font(.caption).foregroundStyle(.secondary)
             }
-        }.sheet(isPresented: $focusOpen) { FocusView() }
+        }.sheet(isPresented: $focusOpen) { FocusView() }.sheet(isPresented: $showingTrails) { TrailsView() }
     }
 }
 
@@ -259,8 +271,8 @@ struct GoalsView: View {
             Button("Add a small goal", systemImage: "plus") { adding = true }.disabled(store.state.habits.count >= 3)
             if store.state.habits.count >= 3 { Text("Three small commitments are enough. Make one easier before adding more.").font(.footnote).foregroundStyle(.secondary) }
             Button("Take a rest day", systemImage: "moon.zzz") { store.apply { try $0.rest(at: Date()) } }
-                .disabled(store.day.rest || !store.day.completed.isEmpty || store.day.focusMinutes > 0 || store.state.focus != nil)
-            Text("Rest protects today's nourishment. Set it before completing goals or starting a focus session.").font(.footnote).foregroundStyle(.secondary)
+                .disabled(store.day.rest || !store.day.completed.isEmpty || store.day.focusMinutes > 0 || store.state.focus != nil || store.state.trailRewardDay == store.state.lastDay)
+            Text("Rest protects today's nourishment. Set it before completing goals, trail steps or a focus session.").font(.footnote).foregroundStyle(.secondary)
         }.sheet(isPresented: $adding) { AddGoalView() }.sheet(item: $editing) { AddGoalView(editing: $0) }
     }
 }
@@ -280,7 +292,7 @@ struct AddGoalView: View {
         _days = State(initialValue: editing?.weekdays ?? Set(1...7))
     }
     var body: some View {
-        Screen(title: editing == nil ? "One small promise" : "Make this goal fit") {
+        Screen(title: editing == nil ? "One small promise" : "Make this goal fit", showsClose: true) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("What will you do?").font(.headline)
                 TextField("For example, read 5 pages", text: $title).textFieldStyle(.roundedBorder).frame(minHeight: 44)
@@ -323,7 +335,7 @@ struct FocusView: View {
     @Environment(\.dismiss) var dismiss
     @State private var minutes = 10
     var body: some View {
-        Screen(title: "A little breathing room") {
+        Screen(title: "A little breathing room", showsClose: true) {
             WolfScene(nourishment: store.state.nourishment, stage: store.state.stage)
             if let session = store.state.focus {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -340,16 +352,18 @@ struct FocusView: View {
                 ActionButton(title: "Begin \(minutes) minutes", icon: "timer") { store.apply { try $0.startFocus(minutes: minutes, at: Date()) } }.disabled(store.day.rest)
             }
             Text("This is a focus timer. It doesn't block apps or verify Screen Time.").font(.caption).foregroundStyle(.secondary)
-            Button("Back to my wolf") { dismiss() }
+            Button("Close") { dismiss() }
         }
     }
 }
 
 struct JourneyView: View {
     @EnvironmentObject var store: LupoStore
+    @State private var showingTrails = false
     var body: some View {
         Screen(title: "Look how far you've come") {
             WeeklyReview(state: store.state)
+            Button("Guided trails & your notes", systemImage: "leaf") { showingTrails = true }
             Text("\(store.state.bond)").font(.system(size: 60, weight: .light, design: .rounded)).foregroundStyle(Theme.accent)
             Text("Bond earned through real-life effort. It never disappears after a missed day.").foregroundStyle(.secondary)
             HStack { Label("\(store.state.days.values.filter { !$0.completed.isEmpty }.count) active days", systemImage: "sun.max"); Spacer(); Label("\(store.state.days.values.reduce(0) { $0 + $1.focusMinutes }) min", systemImage: "timer") }.font(.subheadline)
@@ -360,7 +374,7 @@ struct JourneyView: View {
             if store.state.discoveries.isEmpty { Text("Your first discovery is waiting. Complete a goal, share a meal, then explore.").foregroundStyle(.secondary) }
             ForEach(Array(store.state.discoveries.enumerated().reversed()), id: \.offset) { i, item in Label("\(i + 1). \(item)", systemImage: "sparkles").padding(.vertical, 8) }
             ShareLink(item: "I'm raising \(store.state.name) in Lupo, one small promise at a time. \(store.state.bond) bond earned.") { Label("Share your progress", systemImage: "square.and.arrow.up") }
-        }
+        }.sheet(isPresented: $showingTrails) { TrailsView() }
     }
 }
 
@@ -381,7 +395,7 @@ struct DenView: View {
                     HStack { Text(den); Spacer(); Image(systemName: den == store.state.den ? "checkmark.circle.fill" : den == "Pine forest" || membership.active ? "circle" : "lock") }.padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
                 }.buttonStyle(.plain)
             }
-            Button(membership.active ? "Your Plus membership" : "Explore Lupo Plus", systemImage: "sparkles") { plus = true }
+            Button(membership.active ? "Your Lupo Plus unlock" : "Explore Lupo Plus", systemImage: "sparkles") { plus = true }
             Button("Settings & your data", systemImage: "gearshape") { settings = true }
         }.sheet(isPresented: $plus) { MembershipView() }.sheet(isPresented: $settings) { SettingsView() }
     }
@@ -391,24 +405,23 @@ struct MembershipView: View {
     @EnvironmentObject var membership: Membership
     @Environment(\.dismiss) var dismiss
     var body: some View {
-        Screen(title: "More room to roam") {
+        Screen(title: "More room to roam", showsClose: true) {
             Text("LUPO PLUS").font(.caption.bold()).tracking(3).foregroundStyle(Theme.accent)
-            Text("Make their world feel like yours.").font(.largeTitle.bold())
-            Text("Unlock the Moonlit Lake and Autumn Ridge dens. Your wolf, goals, meals, focus timer, and recovery stay free.").foregroundStyle(.secondary)
-            if membership.active { Label("Your membership is active", systemImage: "checkmark.seal.fill") }
+            Text("Small routines. A world of your own.").font(.largeTitle.bold())
+            Text("Unlock two guided trails with 28 practical steps for focus and evenings, plus Moonlit Lake and Autumn Ridge scenery. One purchase, no subscription. Your wolf, daily goals, fresh-start trail, reminders, weekly review and recovery stay free.").foregroundStyle(.secondary)
+            if membership.active { Label("Lupo Plus is unlocked", systemImage: "checkmark.seal.fill") }
             else {
                 ForEach(membership.products, id: \.id) { product in
-                    ActionButton(title: "\(product.displayPrice) / \(product.id.hasSuffix("annual") ? "year" : "month")", icon: "sparkles") { Task { await membership.purchase(product) } }.disabled(membership.busy)
+                    ActionButton(title: "Unlock Plus · \(product.displayPrice)", icon: "sparkles") { Task { await membership.purchase(product) } }.disabled(membership.busy)
                 }
             }
             if let status = membership.status { Text(status).font(.subheadline) }
-            Text("Subscriptions renew automatically unless canceled at least 24 hours before the current period ends. Payment is charged to your Apple Account. Manage or cancel in App Store subscriptions.").font(.footnote).foregroundStyle(.secondary)
+            Text("A one-time purchase charged to your Apple Account. Restore the unlock on supported devices using the same Apple Account. Your personal progress transfers separately through an exported backup.").font(.footnote).foregroundStyle(.secondary)
             Button("Restore purchases") { Task { await membership.restore() } }.disabled(membership.busy)
             Button("Refresh App Store") { Task { await membership.load() } }.disabled(membership.busy)
-            Link("Manage subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
             Link("Privacy policy", destination: URL(string: "https://raiselupo.chleb.ai/privacy.html")!)
             Link("Terms of use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
-            Button("Back to my wolf") { dismiss() }
+            Button("Close") { dismiss() }
         }
     }
 }
@@ -420,10 +433,12 @@ struct SettingsView: View {
     @State private var importing = false
     @State private var backup: Data?
     @State private var confirmReset = false
+    @State private var showingReminders = false
     var body: some View {
-        Screen(title: "Your wolf, your data") {
+        Screen(title: "Your wolf, your data", showsClose: !store.storageBlocked) {
             if !store.storageBlocked { Button("Close") { dismiss() } }
             Text("Your progress is stored on this device. No account, ads, or analytics are included in this build. Export a backup before changing devices.").foregroundStyle(.secondary)
+            if !store.storageBlocked { Button("Reminder settings", systemImage: "bell") { showingReminders = true } }
             Button("Export my data", systemImage: "square.and.arrow.up") { exporting = true }
             Button("Restore a backup", systemImage: "square.and.arrow.down") { importing = true }
             Link("Contact support", destination: URL(string: "https://raiselupo.chleb.ai/support.html")!)
@@ -432,6 +447,7 @@ struct SettingsView: View {
             Text("Screen Time verification is not enabled in this build.").font(.caption).foregroundStyle(.secondary)
             Button("Delete my data and start again", role: .destructive) { confirmReset = true }
         }
+        .sheet(isPresented: $showingReminders) { RemindersView() }
         .fileExporter(isPresented: $exporting, document: LupoDocument(data: store.export()), contentType: .json, defaultFilename: "lupo-backup") { result in
             if case .failure = result { store.message = "Couldn't export your data. Please try again." }
         }
@@ -452,7 +468,7 @@ struct SettingsView: View {
         .confirmationDialog("Delete this wolf and all local progress?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Delete my data", role: .destructive) { store.reset() }
             Button("Keep my wolf", role: .cancel) { }
-        } message: { Text("This cannot be undone. Export a backup first if you want to keep a copy. This does not cancel an App Store subscription.") }
+        } message: { Text("This cannot be undone. Export a backup first if you want to keep a copy. Your Lupo Plus purchase can be restored separately.") }
     }
 }
 

@@ -40,6 +40,10 @@ public struct Companion: Codable, Equatable, Sendable {
     public var discoveries: [String] = []
     public var focus: FocusSession?
     public var den = "Pine forest"
+    public var reminder: ReminderPreference?
+    public var trail: TrailProgress?
+    public var trailRewardDay: String?
+    public var pastTrails: [TrailProgress]?
     public init(day: String) { lastDay = day }
     public var stage: String {
         switch bond { case 0..<100: "Pup"; case 100..<350: "Yearling"; case 350..<800: "Scout"; case 800..<1600: "Hunter"; default: "Alpha" }
@@ -63,8 +67,9 @@ public struct GameClock: Sendable {
         return String(format: "%04d-%02d-%02d", c.year!, c.month!, c.day!)
     }
     public func date(_ key: String) -> Date? {
+        guard key.utf8.count == 10 else { return nil }
         let c = key.split(separator: "-").compactMap { Int($0) }
-        guard c.count == 3 else { return nil }
+        guard c.count == 3, (1...9999).contains(c[0]), (1...12).contains(c[1]), (1...31).contains(c[2]) else { return nil }
         let value = calendar.date(from: DateComponents(year: c[0], month: c[1], day: c[2], hour: 12))
         guard let value, self.key(value) == key else { return nil }
         return value
@@ -136,7 +141,7 @@ public struct Game: Sendable {
     public mutating func rest(at now: Date) throws {
         try open(at: now)
         let key = clock.key(now)
-        guard state.days[key]!.completed.isEmpty, state.days[key]!.focusMinutes == 0, state.focus == nil else { throw LupoError.unavailable }
+        guard state.days[key]!.completed.isEmpty, state.days[key]!.focusMinutes == 0, state.focus == nil, state.trailRewardDay != key else { throw LupoError.unavailable }
         state.days[key]!.rest = true
     }
 
@@ -184,6 +189,32 @@ public struct Game: Sendable {
         state.den = den
     }
 
+    public mutating func setReminder(_ preference: ReminderPreference?) throws {
+        if let preference, !(0...23).contains(preference.hour) || !(0...59).contains(preference.minute) { throw LupoError.invalidGoal }
+        state.reminder = preference
+    }
+
+    public mutating func beginTrail(_ id: String, premium: Bool, at now: Date) throws {
+        try open(at: now)
+        guard let trail = GuidedTrail.find(id), !trail.premium || premium else { throw LupoError.unavailable }
+        if let previous = state.trail, !previous.entries.isEmpty {
+            guard (state.pastTrails?.count ?? 0) < 100 else { throw LupoError.unavailable }
+            state.pastTrails = (state.pastTrails ?? []) + [previous]
+        }
+        state.trail = TrailProgress(id: id, started: clock.key(now), entries: [])
+    }
+
+    public mutating func completeTrailStep(note: String, premium: Bool, at now: Date) throws {
+        try open(at: now)
+        let key = clock.key(now)
+        guard var progress = state.trail, let trail = GuidedTrail.find(progress.id),
+              !trail.premium || premium, !progress.isComplete, state.trailRewardDay != key,
+              state.days[key]?.rest == false, note.count <= 280 else { throw LupoError.unavailable }
+        progress.entries.append(TrailEntry(day: key, note: note.trimmingCharacters(in: .whitespacesAndNewlines)))
+        state.trail = progress; state.trailRewardDay = key
+        state.food = min(9, state.food + 1); state.bond += 10
+    }
+
     private func validate(_ habit: Habit) throws {
         guard !habit.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, habit.title.count <= 80,
               habit.cue.count <= 120, !habit.weekdays.isEmpty, habit.weekdays.isSubset(of: Set(1...7)) else { throw LupoError.invalidGoal }
@@ -198,6 +229,22 @@ public struct Game: Sendable {
               ["Pine forest", "Moonlit lake", "Autumn ridge"].contains(s.den),
               s.days.keys.allSatisfy({ clock.date($0) != nil && $0 <= s.lastDay }) else { throw LupoError.invalidSave }
         let game = Game(state: s, clock: clock)
+        if let rewarded = s.trailRewardDay {
+            guard clock.date(rewarded) != nil, rewarded <= s.lastDay else { throw LupoError.invalidSave }
+        }
+        guard (s.pastTrails?.count ?? 0) <= 100 else { throw LupoError.invalidSave }
+        for progress in (s.pastTrails ?? []) + (s.trail.map { [$0] } ?? []) {
+            guard let trail = GuidedTrail.find(progress.id), clock.date(progress.started) != nil, progress.started <= s.lastDay,
+                  progress.entries.count <= trail.steps.count else { throw LupoError.invalidSave }
+            var previous: String?
+            for entry in progress.entries {
+                guard clock.date(entry.day) != nil, entry.day >= progress.started, entry.day <= s.lastDay,
+                      previous.map({ entry.day > $0 }) ?? true, entry.note.count <= 280 else { throw LupoError.invalidSave }
+                previous = entry.day
+            }
+        }
+        if let last = s.trail?.entries.last { guard s.trailRewardDay == last.day else { throw LupoError.invalidSave } }
+        if let reminder = s.reminder, !(0...23).contains(reminder.hour) || !(0...59).contains(reminder.minute) { throw LupoError.invalidSave }
         for h in s.habits { try game.validate(h) }
         for day in s.days.values {
             guard day.scheduled.count <= 3, Set(day.scheduled.map(\.id)).count == day.scheduled.count,

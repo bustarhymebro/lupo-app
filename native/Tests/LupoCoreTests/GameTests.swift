@@ -47,6 +47,97 @@ final class GameTests: XCTestCase {
         try g.feed(at: date("2026-11-20T17:00:00Z"))
         XCTAssertEqual(g.state.nourishment, 30)
     }
+    func testQuietRemindersRespectCompletionRestAndWeekdays() throws {
+        var g = try adopted()
+        try g.setReminder(ReminderPreference(hour: 19, minute: 30))
+        XCTAssertEqual(ReminderPlanner.plan(state: g.state, now: now, clock: clock).count, 14)
+        try g.complete(g.state.habits[0].id, at: now)
+        XCTAssertEqual(ReminderPlanner.plan(state: g.state, now: now, clock: clock).count, 13)
+        let tomorrow = date("2026-11-09T17:00:00Z")
+        try g.rest(at: tomorrow)
+        XCTAssertEqual(ReminderPlanner.plan(state: g.state, now: tomorrow, clock: clock).first!.day, "2026-11-10")
+        var habit = g.state.habits[0]; habit.weekdays = [2]
+        try g.editHabit(habit, at: tomorrow)
+        XCTAssertEqual(ReminderPlanner.plan(state: g.state, now: tomorrow, clock: clock).map(\.day), ["2026-11-16"])
+        try g.setReminder(nil)
+        XCTAssertEqual(ReminderPlanner.plan(state: g.state, now: tomorrow, clock: clock).count, 0)
+    }
+    func testAfterMidnightReminderBelongsToPreviousGameDay() throws {
+        var g = try adopted(); try g.setReminder(ReminderPreference(hour: 1, minute: 0))
+        let first = ReminderPlanner.plan(state: g.state, now: now, clock: clock)[0]
+        XCTAssertEqual(first.day, "2026-11-08")
+        XCTAssertEqual(first.date, date("2026-11-09T06:00:00Z"))
+        XCTAssertThrowsError(try g.setReminder(ReminderPreference(hour: 24, minute: 0)))
+        var s = g.state; s.reminder = ReminderPreference(hour: 12, minute: 60)
+        XCTAssertThrowsError(try Game.decode(JSONEncoder().encode(s), clock: clock))
+    }
+    func testWestwardTravelPreservesFutureReminders() throws {
+        var g = try adopted(); try g.setReminder(ReminderPreference(hour: 19, minute: 0))
+        let travelTime = date("2026-11-09T10:00:00Z")
+        try g.open(at: travelTime)
+        let west = GameClock(timeZone: TimeZone(identifier: "America/Los_Angeles")!)
+        XCTAssertEqual(west.key(travelTime), "2026-11-08")
+        let reminders = ReminderPlanner.plan(state: g.state, now: travelTime, clock: west)
+        XCTAssertEqual(reminders.count, 14)
+        XCTAssertEqual(reminders.first!.day, "2026-11-09")
+        XCTAssertEqual(reminders.first!.date, date("2026-11-10T03:00:00Z"))
+        var travelled = Game(state: g.state, clock: west)
+        XCTAssertThrowsError(try travelled.complete(g.state.habits[0].id, at: travelTime))
+        try travelled.complete(g.state.habits[0].id, at: date("2026-11-09T20:00:00Z"))
+        XCTAssertEqual(travelled.state.bond, 10)
+    }
+    func testFreshStartTrailRewardsOnceAndPreservesNotes() throws {
+        var g = try adopted()
+        try g.beginTrail("fresh-start", premium: false, at: now)
+        try g.completeTrailStep(note: "A page after coffee", premium: false, at: now)
+        XCTAssertEqual(g.state.food, 2); XCTAssertEqual(g.state.bond, 10)
+        XCTAssertThrowsError(try g.completeTrailStep(note: "", premium: false, at: now))
+        XCTAssertThrowsError(try g.rest(at: now))
+        try g.beginTrail("fresh-start", premium: false, at: now)
+        XCTAssertEqual(g.state.pastTrails?.first?.entries.first?.note, "A page after coffee")
+        XCTAssertThrowsError(try g.completeTrailStep(note: "", premium: false, at: now))
+        try g.completeTrailStep(note: "Back again", premium: false, at: now.addingTimeInterval(86400))
+        let restored = try Game.decode(JSONEncoder().encode(g.state), clock: clock)
+        XCTAssertEqual(restored.state, g.state)
+    }
+    func testPremiumTrailRequiresAccessButNotesRemainReadable() throws {
+        var g = try adopted()
+        XCTAssertThrowsError(try g.beginTrail("attention", premium: false, at: now))
+        try g.beginTrail("attention", premium: true, at: now)
+        XCTAssertThrowsError(try g.completeTrailStep(note: "", premium: false, at: now))
+        try g.completeTrailStep(note: "Five minutes reading", premium: true, at: now)
+        let restored = try Game.decode(JSONEncoder().encode(g.state), clock: clock)
+        XCTAssertEqual(restored.state.trail?.entries.first?.note, "Five minutes reading")
+        try g.open(at: now.addingTimeInterval(86400))
+        try g.rest(at: now.addingTimeInterval(86400))
+        XCTAssertThrowsError(try g.completeTrailStep(note: "", premium: true, at: now.addingTimeInterval(86400)))
+    }
+    func testTrailCompletionHasNoDeadlineOrExtraReward() throws {
+        var g = try adopted(); try g.beginTrail("fresh-start", premium: false, at: now)
+        for index in 0..<7 {
+            try g.completeTrailStep(note: "", premium: false, at: now.addingTimeInterval(Double(index * 3 * 86400)))
+        }
+        XCTAssertEqual(g.state.trail?.isComplete, true)
+        XCTAssertEqual(g.state.bond, 70)
+        XCTAssertThrowsError(try g.completeTrailStep(note: "", premium: false, at: now.addingTimeInterval(22 * 86400)))
+    }
+    func testTrailBackupsRejectInvalidAndDuplicateEntries() throws {
+        let g = try adopted(); var s = g.state
+        s.trail = TrailProgress(id: "missing", started: s.lastDay, entries: [])
+        XCTAssertThrowsError(try Game.decode(JSONEncoder().encode(s), clock: clock))
+        s.trailRewardDay = s.lastDay
+        s.trail = TrailProgress(id: "fresh-start", started: s.lastDay, entries: [TrailEntry(day: s.lastDay, note: ""), TrailEntry(day: s.lastDay, note: "")])
+        XCTAssertThrowsError(try Game.decode(JSONEncoder().encode(s), clock: clock))
+        s.trail = TrailProgress(id: "fresh-start", started: s.lastDay, entries: [TrailEntry(day: s.lastDay, note: String(repeating: "x", count: 281))])
+        XCTAssertThrowsError(try Game.decode(JSONEncoder().encode(s), clock: clock))
+    }
+    func testOldBackupsWithoutNewOptionsStillRestore() throws {
+        let g = try adopted()
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(g.state)) as! [String: Any]
+        for key in ["reminder", "trail", "trailRewardDay", "pastTrails"] { object.removeValue(forKey: key) }
+        let restored = try Game.decode(JSONSerialization.data(withJSONObject: object), clock: clock)
+        XCTAssertEqual(restored.state, g.state)
+    }
     func testCompletionAndExpeditionIdempotency() throws {
         var g = try adopted(); let id = g.state.habits[0].id
         try g.complete(id, at: now)

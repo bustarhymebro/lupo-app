@@ -11,7 +11,11 @@ final class LupoStore: ObservableObject {
     private var undoGoalState: Game?
     private let url: URL
     init() {
+        #if os(macOS)
+        let directory = URL.applicationSupportDirectory.appending(path: Bundle.main.bundleIdentifier ?? "LupoPreview")
+        #else
         let directory = URL.applicationSupportDirectory.appending(path: "Lupo")
+        #endif
         url = directory.appending(path: "companion.json")
         game = Game(state: Companion(day: GameClock().key(Date())))
         do {
@@ -24,11 +28,12 @@ final class LupoStore: ObservableObject {
         }
     }
     var state: Companion { game.state }
-    var day: Day { state.days[game.clock.key(Date())] ?? Day(scheduled: []) }
+    var day: Day { state.days[state.lastDay] ?? Day(scheduled: []) }
     func apply(_ change: (inout Game) throws -> Void) {
         guard !storageBlocked else { message = "Export your saved data, then reset to start again."; return }
         do {
-            var candidate = game
+            // Re-read the current timezone after travel or a device setting change.
+            var candidate = Game(state: game.state)
             try change(&candidate)
             let data = try JSONEncoder().encode(candidate.state)
             try data.write(to: url, options: .atomic)
@@ -54,7 +59,7 @@ final class LupoStore: ObservableObject {
         if game.state != previous.state { undoGoalState = previous; canUndoGoal = true }
     }
     func undoLastGoal() {
-        guard let previous = undoGoalState, previous.state.lastDay == game.clock.key(Date()) else { return }
+        guard let previous = undoGoalState, previous.state.lastDay == GameClock().key(Date()) else { return }
         do {
             try JSONEncoder().encode(previous.state).write(to: url, options: .atomic)
             game = previous; undoGoalState = nil; canUndoGoal = false
@@ -75,7 +80,7 @@ final class LupoStore: ObservableObject {
             var restored = try Game.decode(data)
             try restored.open(at: Date())
             try JSONEncoder().encode(restored.state).write(to: url, options: .atomic)
-            storageBlocked = false; game = restored
+            storageBlocked = false; game = restored; undoGoalState = nil; canUndoGoal = false; message = nil
         } catch { message = "This backup couldn't be restored. Your existing progress is unchanged." }
     }
 }
@@ -90,7 +95,7 @@ struct LupoDocument: FileDocument {
 
 @MainActor
 final class Membership: ObservableObject {
-    static let productIDs = ["com.chlebholdings.lupo.plus.monthly", "com.chlebholdings.lupo.plus.annual"]
+    static let productIDs = ["com.chlebholdings.lupo.plus.lifetime"]
     @Published private(set) var products: [Product] = []
     @Published private(set) var active = false
     @Published private(set) var busy = false
@@ -111,8 +116,8 @@ final class Membership: ObservableObject {
     func load() async {
         do {
             let loaded = try await Product.products(for: Self.productIDs)
-            products = Self.productIDs.compactMap { id in loaded.first { $0.id == id } }
-            if products.isEmpty { status = "Membership isn't available in this build. Your wolf and daily goals are free." }
+            products = Self.productIDs.compactMap { id in loaded.first { $0.id == id && $0.type == .nonConsumable } }
+            if products.isEmpty { status = "Plus isn't available in this build. Your wolf and daily goals are free." }
         } catch { status = "The App Store couldn't be reached. Try again when you're online." }
         await refresh()
     }
@@ -128,8 +133,8 @@ final class Membership: ObservableObject {
         do {
             switch try await product.purchase() {
             case .success(.verified(let transaction)):
-                await refresh(); await transaction.finish(); status = active ? "Welcome to Lupo Plus." : "Purchase received. Checking your membership."
-            case .success(.unverified): status = "This purchase couldn't be verified. No membership was unlocked."
+                await refresh(); await transaction.finish(); status = active ? "Welcome to Lupo Plus." : "Purchase received. Checking your unlock."
+            case .success(.unverified): status = "This purchase couldn't be verified. Plus was not unlocked."
             case .pending: status = "Your purchase is awaiting approval."
             case .userCancelled: break
             @unknown default: status = "Purchase status changed. Try restoring purchases."
@@ -138,7 +143,7 @@ final class Membership: ObservableObject {
     }
     func restore() async {
         guard !busy else { return }; busy = true; defer { busy = false }
-        do { try await AppStore.sync(); await refresh(); status = active ? "Membership restored." : "No active Lupo membership was found." }
+        do { try await AppStore.sync(); await refresh(); status = active ? "Plus restored." : "No Lupo Plus purchase was found." }
         catch { status = "Couldn't restore purchases. Please try again." }
     }
 }
