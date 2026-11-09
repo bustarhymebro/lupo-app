@@ -8,7 +8,9 @@ struct TrailsView: View {
     @State private var replacing: String?
     @State private var showingPlus = false
     @State private var note = ""
+    @State private var focusStep = UUID()
     var body: some View {
+        ScrollViewReader { proxy in
         Screen(title: "Guided trails", showsClose: true) {
             Text("Practical experiments for your real life. One step on the days you have room. No deadlines and no catching up.").foregroundStyle(Theme.secondaryText)
             if let progress = store.state.trail, let trail = GuidedTrail.find(progress.id) {
@@ -36,7 +38,7 @@ struct TrailsView: View {
                         }
                         if store.day.rest { Text("It's a rest day. This step will be here when you return.").font(.subheadline) }
                     }
-                }.padding(20).background(Theme.panel, in: RoundedRectangle(cornerRadius: 24))
+                }.padding(20).background(Theme.panel, in: RoundedRectangle(cornerRadius: 24)).id("active-trail")
             }
             Text("Choose your next trail").font(.title2.bold())
             ForEach(GuidedTrail.catalog) { trail in
@@ -77,6 +79,13 @@ struct TrailsView: View {
             Button("Start trail and keep my notes") { if let replacing { begin(replacing) }; replacing = nil }
             Button("Keep current trail", role: .cancel) { replacing = nil }
         } message: { Text("Your previous steps and notes remain in your trail journal. Only one step can earn a meal each day.") }
+        .onChange(of: focusStep) { _, _ in
+            withAnimation { proxy.scrollTo("active-trail", anchor: .top) }
+        }
+        }
     }
-    private func begin(_ id: String) { store.apply { try $0.beginTrail(id, premium: membership.active, at: Date()) }; if store.message == nil { note = "" } }
+    private func begin(_ id: String) {
+        store.apply { try $0.beginTrail(id, premium: membership.active, at: Date()) }
+        if store.message == nil { note = ""; focusStep = UUID() }
+    }
 }

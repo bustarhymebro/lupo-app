@@ -11,13 +11,16 @@ final class LupoStoreKitTests: XCTestCase {
     private var session: SKTestSession!
     private let productID = "com.chlebholdings.lupo.plus.lifetime"
 
-    private func prepare() throws {
+    private func prepare(askToBuy: Bool = false) throws {
         continueAfterFailure = false
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "LupoTest", withExtension: "storekit"))
         session = try SKTestSession(contentsOf: url)
         session.resetToDefaultState()
         session.clearTransactions()
         session.disableDialogs = true
+        session.askToBuyEnabled = askToBuy
+        XCTAssertTrue(session.disableDialogs)
+        XCTAssertEqual(session.askToBuyEnabled, askToBuy)
         app = XCUIApplication()
         app.launchEnvironment["LUPO_UI_TEST_SESSION"] = UUID().uuidString
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -43,7 +46,8 @@ final class LupoStoreKitTests: XCTestCase {
         }
         for _ in 0..<8 {
             if element.isHittable { break }
-            app.swipeUp()
+            if element.frame.midY < app.frame.midY { app.swipeDown() }
+            else { app.swipeUp() }
         }
         guard element.isHittable else {
             XCTFail("Unreachable control", file: file, line: line); throw CheckFailure.failed
@@ -94,7 +98,7 @@ final class LupoStoreKitTests: XCTestCase {
         let records = session.allTransactions().map {
             "id=\($0.identifier), product=\($0.productIdentifier), state=\($0.state.rawValue), pendingApproval=\($0.pendingAskToBuyConfirmation)"
         }
-        return "Local transactions: [\(records.joined(separator: "; "))]"
+        return "Local store: dialogsDisabled=\(session.disableDialogs), askToBuy=\(session.askToBuyEnabled), transactions=[\(records.joined(separator: "; "))]"
     }
 
     private func statusCleared(file: StaticString = #filePath, line: UInt = #line) async throws {
@@ -118,6 +122,8 @@ final class LupoStoreKitTests: XCTestCase {
         try tap(app.buttons["Find a guided trail"])
         try tap(app.buttons["trail.start.attention"])
         let note = app.textViews["trail.note"].exists ? app.textViews["trail.note"] : app.textFields["trail.note"]
+        XCTAssertTrue(note.isHittable, "Starting a trail should reveal its first step")
+        capture("15-paid-trail-first-step")
         try tap(note); note.typeText("One quiet page belongs to me")
         try tap(app.buttons["keyboard.done"])
         try tap(app.buttons["trail.complete"])
@@ -150,8 +156,7 @@ final class LupoStoreKitTests: XCTestCase {
 
     func testAskToBuyWaitsForApproval() async throws {
         defer { cleanUp() }
-        try prepare()
-        session.askToBuyEnabled = true
+        try prepare(askToBuy: true)
         try tap(app.buttons["plus.purchase"])
         try await status("Your purchase is awaiting approval.")
         try await unlocked(false)
@@ -176,6 +181,7 @@ final class LupoStoreKitTests: XCTestCase {
         try await unlocked(false)
         XCTAssertTrue(session.allTransactions().filter { $0.state == .purchased }.isEmpty)
         try await session.setSimulatedError(nil, forAPI: .purchase)
+        session.disableDialogs = true
         try tap(app.buttons["plus.purchase"])
         try await unlocked(true)
     }
