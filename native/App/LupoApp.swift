@@ -410,17 +410,19 @@ struct DenView: View {
     @EnvironmentObject var membership: Membership
     @State private var plus = false
     @State private var settings = false
+    private var visibleDen: String { membership.active ? store.state.den : "Pine forest" }
     var body: some View {
         Screen(title: "Your den") {
-            WolfScene(nourishment: store.state.nourishment, stage: store.state.stage, den: membership.active ? store.state.den : "Pine forest")
+            WolfScene(nourishment: store.state.nourishment, stage: store.state.stage, den: visibleDen)
             Text("Make yourself at home").font(.title2.bold())
             ForEach(["Pine forest", "Moonlit lake", "Autumn ridge"], id: \.self) { den in
                 Button {
                     if den != "Pine forest" && !membership.active { plus = true }
                     else { store.apply { try $0.chooseDen(den, premium: membership.active) } }
                 } label: {
-                    HStack { Text(den); Spacer(); Image(systemName: den == store.state.den ? "checkmark.circle.fill" : den == "Pine forest" || membership.active ? "circle" : "lock") }.padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
+                    HStack { Text(den); Spacer(); Image(systemName: den == visibleDen ? "checkmark.circle.fill" : den == "Pine forest" || membership.active ? "circle" : "lock") }.padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
                 }.buttonStyle(.plain).accessibilityIdentifier("den.select.\(den)")
+                    .accessibilityAddTraits(den == visibleDen ? .isSelected : [])
             }
             Button(membership.active ? "Your Lupo Plus unlock" : "Explore Lupo Plus", systemImage: "sparkles") { plus = true }
             Button("Settings & your data", systemImage: "gearshape") { settings = true }

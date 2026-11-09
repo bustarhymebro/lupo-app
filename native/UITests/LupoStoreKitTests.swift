@@ -90,7 +90,7 @@ final class LupoStoreKitTests: XCTestCase {
     }
 
     private func capture(_ name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
     }
 
@@ -118,6 +118,8 @@ final class LupoStoreKitTests: XCTestCase {
         XCTAssertEqual(transaction.state, .purchased)
         capture("15-purchase-unlocked")
         try tap(app.buttons["screen.close.Lupo Plus"])
+        try tap(app.buttons["den.select.Moonlit lake"])
+        XCTAssertTrue(app.buttons["den.select.Moonlit lake"].isSelected)
         try tap(app.tabBars.buttons["Companion"])
         try tap(app.buttons["Find a guided trail"])
         try tap(app.buttons["trail.start.attention"])
@@ -141,6 +143,9 @@ final class LupoStoreKitTests: XCTestCase {
         try await status("No Lupo Plus purchase was found.")
         capture("16-refund-removes-access")
         try tap(app.buttons["screen.close.Lupo Plus"])
+        XCTAssertTrue(app.buttons["den.select.Pine forest"].isSelected)
+        XCTAssertFalse(app.buttons["den.select.Moonlit lake"].isSelected)
+        capture("16-refund-returns-to-free-scenery")
         try tap(app.tabBars.buttons["Companion"])
         XCTAssertEqual(app.staticTexts["companion.bond"].label, "10 bond")
         try tap(app.buttons["Continue your guided trail"])
