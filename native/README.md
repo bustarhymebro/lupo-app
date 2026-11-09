@@ -13,7 +13,7 @@ swift test -j 2
 xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
-The `LupoUITests` target covers onboarding, goal rewards and undo, exploration persistence, edits that begin tomorrow, guided-trail progress, purchase-screen exit and the largest accessibility text category. Each UI test has an isolated Debug-only save directory and notification identifier namespace. The workflow runs these checks on an iPhone simulator. To run them locally with an installed iPhone simulator runtime:
+The `LupoUITests` target covers onboarding, goal rewards and undo, exploration persistence, edits that begin tomorrow, guided-trail progress, purchase-screen exit, secondary-screen dismissal and the largest accessibility text category. The two form flows exercise the keyboard Done control, while sheet controls use distinct accessibility identifiers. Each UI test has an isolated Debug-only save directory and notification identifier namespace. The workflow runs these checks on an iPhone simulator. To run them locally with an installed iPhone simulator runtime:
 
 ```sh
 simulator_id=$(python3 tools/select-simulator.py)
@@ -28,7 +28,7 @@ With only Command Line Tools installed, run the same core regression cases throu
 sh tools/test-core.sh
 ```
 
-`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The active workflow in `.github/workflows/native.yml` runs core XCTest, an unsigned iPhone simulator build and four native UI flows on pull requests affecting the native app. Test result bundles, exported screenshots and a machine-readable summary are retained as workflow artifacts for seven days. Inspect the run for the exact commit before treating a check as evidence.
+`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The active workflow in `.github/workflows/native.yml` runs core XCTest, an unsigned iPhone simulator build and five native UI flows on pull requests affecting the native app. Test result bundles, exported screenshots and a machine-readable summary are retained as workflow artifacts for seven days. Inspect the run for the exact commit before treating a check as evidence.
 
 ## Data and time
 

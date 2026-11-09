@@ -81,10 +81,10 @@ struct RemindersView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var time = Calendar.current.date(from: DateComponents(hour: 19, minute: 0)) ?? Date()
     var body: some View {
-        Screen(title: "A gentle nudge", showsClose: true) {
+        Screen(title: "Reminders", showsClose: true) {
             Text("One quiet reminder on the days you choose for your goals. No sounds, badges, or messages about a hungry wolf.").font(.title3)
             DatePicker("When works for you?", selection: $time, displayedComponents: .hourAndMinute)
-            Text("Completed days and rest days are skipped. Reminders cover the next two weeks and refresh when you open Lupo. Times follow your device's local clock.").font(.subheadline).foregroundStyle(.secondary)
+            Text("Completed days and rest days are skipped. Reminders cover the next two weeks and refresh when you open Lupo. Times follow your device's local clock.").font(.subheadline).foregroundStyle(Theme.secondaryText)
             ActionButton(title: store.state.reminder == nil ? "Enable quiet reminders" : "Save reminder time", icon: "bell") {
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: time)
                 Task { await reminders.enable(ReminderPreference(hour: parts.hour!, minute: parts.minute!), store: store) }

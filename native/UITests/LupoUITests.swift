@@ -12,10 +12,17 @@ final class LupoUITests: XCTestCase {
         app.launchArguments = ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
     }
 
-    private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+    private func reveal(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertTrue(element.waitForExistence(timeout: 8), "Missing control: \(element)", file: file, line: line)
-        for _ in 0..<8 where !element.isHittable { app.swipeUp() }
+        for _ in 0..<8 {
+            if element.isHittable { break }
+            app.swipeUp()
+        }
         XCTAssertTrue(element.isHittable, "Control cannot be reached", file: file, line: line)
+    }
+
+    private func tap(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        reveal(element, file: file, line: line)
         element.tap()
     }
 
@@ -34,6 +41,7 @@ final class LupoUITests: XCTestCase {
         capture("03-welcome-meal")
         tap(app.buttons["Share the welcome meal"])
         XCTAssertTrue(app.tabBars.buttons["Companion"].waitForExistence(timeout: 5))
+        capture("04-companion-start")
     }
 
     func testGoalUndoExplorationAndPersistence() {
@@ -85,9 +93,9 @@ final class LupoUITests: XCTestCase {
         tap(app.buttons["trail.start.attention"])
         XCTAssertTrue(app.buttons["Restore purchases"].waitForExistence(timeout: 5))
         capture("07-plus-offer")
-        tap(app.navigationBars.buttons["Close"].firstMatch)
+        tap(app.buttons["screen.close.Lupo Plus"])
         XCTAssertTrue(app.buttons["trail.start.fresh-start"].waitForExistence(timeout: 5))
-        tap(app.navigationBars.buttons["Close"].firstMatch)
+        tap(app.buttons["screen.close.Guided trails"])
         app.terminate(); app.launch()
         tap(app.buttons["Continue your guided trail"])
         XCTAssertFalse(app.buttons["trail.complete"].exists)
@@ -101,8 +109,26 @@ final class LupoUITests: XCTestCase {
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         adopt()
         let goal = app.buttons["goal.complete.Read 5 pages"]
+        reveal(goal)
+        capture("09-accessibility-goal")
         tap(goal)
         XCTAssertTrue(app.buttons["Undo last check-in"].exists)
         capture("09-accessibility-text")
+    }
+
+    func testSecondaryScreensRemainDismissible() {
+        prepare(); adopt()
+        tap(app.buttons["Make room for a little focus"])
+        capture("10-focus")
+        tap(app.buttons["screen.close.Focus"])
+        tap(app.tabBars.buttons["Den"])
+        capture("11-den")
+        tap(app.buttons["Settings & your data"])
+        capture("12-settings")
+        tap(app.buttons["Reminder settings"])
+        capture("13-reminders")
+        tap(app.buttons["screen.close.Reminders"])
+        tap(app.buttons["screen.close.Settings"])
+        XCTAssertTrue(app.buttons["Settings & your data"].waitForExistence(timeout: 5))
     }
 }
