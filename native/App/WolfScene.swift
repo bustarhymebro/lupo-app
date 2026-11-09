@@ -8,10 +8,20 @@ struct WolfScene: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var breathing = false
     @State private var response = false
+    private func artwork(_ name: String) -> Image {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return Image(systemName: "pawprint.fill") }
+        #if os(iOS)
+        guard let image = UIImage(contentsOfFile: url.path) else { return Image(systemName: "pawprint.fill") }
+        return Image(uiImage: image)
+        #else
+        guard let image = NSImage(contentsOf: url) else { return Image(systemName: "pawprint.fill") }
+        return Image(nsImage: image)
+        #endif
+    }
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Image("forest-dawn").resizable().scaledToFill()
+                artwork("forest-dawn").resizable().scaledToFill()
                     .frame(width: geometry.size.width, height: 310).clipped()
                     .overlay {
                         if den == "Moonlit lake" { Color(red: 0.14, green: 0.18, blue: 0.43).opacity(0.45) }
@@ -20,7 +30,7 @@ struct WolfScene: View {
                     }
                 Ellipse().fill(Color(red: 0.12, green: 0.20, blue: 0.15).opacity(0.25))
                     .frame(width: 128, height: 16).blur(radius: 8).offset(y: 120)
-                Image("wolf-\(stage.lowercased())").resizable().scaledToFit()
+                artwork("wolf-\(stage.lowercased())").resizable().scaledToFit()
                     .frame(width: min(geometry.size.width - 48, 290), height: 270)
                     .scaleEffect(response && !reduceMotion ? 1.035 : breathing && !reduceMotion ? 1.012 : 1, anchor: .bottom)
                     .rotationEffect(.degrees(nourishment < 25 ? -3 : 0), anchor: .bottom)
