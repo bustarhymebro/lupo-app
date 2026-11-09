@@ -91,8 +91,19 @@ struct Screen<Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24, content: content)
                     .frame(maxWidth: 560).padding(20).frame(maxWidth: .infinity)
-            }.background(Theme.background).navigationTitle(title).buttonStyle(TouchButtonStyle())
-            .toolbar { if showsClose { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } } }
+            }.scrollDismissesKeyboard(.interactively)
+            .background(Theme.background).navigationTitle(title).buttonStyle(TouchButtonStyle())
+            .toolbar {
+                if showsClose { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+                #if os(iOS)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }.accessibilityIdentifier("keyboard.done")
+                }
+                #endif
+            }
         }
     }
 }

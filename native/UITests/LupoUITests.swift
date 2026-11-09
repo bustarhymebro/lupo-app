@@ -65,6 +65,7 @@ final class LupoUITests: XCTestCase {
         tap(title)
         let value = title.value as? String ?? ""
         title.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: value.count) + "Read one page")
+        tap(app.buttons["keyboard.done"])
         tap(app.buttons["Save my changes"])
         XCTAssertTrue(app.buttons["goal.edit.Read one page"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["goal.complete.Read 5 pages"].exists)
@@ -77,6 +78,8 @@ final class LupoUITests: XCTestCase {
         tap(app.buttons["trail.start.fresh-start"])
         let note = app.textViews["trail.note"].exists ? app.textViews["trail.note"] : app.textFields["trail.note"]
         tap(note); note.typeText("A page after breakfast")
+        capture("07-trail-keyboard")
+        tap(app.buttons["keyboard.done"])
         tap(app.buttons["trail.complete"])
         XCTAssertFalse(app.buttons["trail.complete"].exists)
         tap(app.buttons["trail.start.attention"])
