@@ -10,6 +10,9 @@ final class LupoStoreKitTests: XCTestCase {
     private var app: XCUIApplication!
     private var session: SKTestSession!
     private let productID = "com.chlebholdings.lupo.plus.lifetime"
+    // A fresh CI simulator can take over two minutes to prepare its first receipt.
+    // Poll real outcomes; never substitute a delay or an assumed entitlement.
+    private let storeTimeout: TimeInterval = 180
 
     private func prepare(askToBuy: Bool = false) throws {
         continueAfterFailure = false
@@ -70,23 +73,25 @@ final class LupoStoreKitTests: XCTestCase {
     private func status(_ message: String, file: StaticString = #filePath, line: UInt = #line) async throws {
         let value = app.staticTexts["plus.status"]
         let expected = NSPredicate(format: "label == %@", message)
-        let result = await XCTWaiter.fulfillment(of: [XCTNSPredicateExpectation(predicate: expected, object: value)], timeout: 12)
+        let result = await XCTWaiter.fulfillment(of: [XCTNSPredicateExpectation(predicate: expected, object: value)], timeout: storeTimeout)
         guard result == .completed else {
             capture("store-status-failure")
             let observed = value.exists ? value.label : "No status text"
             XCTFail("Expected: \(message). Observed: \(observed). \(transactionsDescription). UI: \(app.debugDescription)", file: file, line: line)
             throw CheckFailure.failed
         }
+        try await idle(file: file, line: line)
     }
 
     private func unlocked(_ expected: Bool, file: StaticString = #filePath, line: UInt = #line) async throws {
         let element = app.staticTexts["Lupo Plus is unlocked"]
-        let result = await XCTWaiter.fulfillment(of: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == %@", NSNumber(value: expected)), object: element)], timeout: 12)
+        let result = await XCTWaiter.fulfillment(of: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == %@", NSNumber(value: expected)), object: element)], timeout: storeTimeout)
         guard result == .completed else {
             capture("store-entitlement-failure")
             XCTFail("Incorrect entitlement state. \(transactionsDescription). UI: \(app.debugDescription)", file: file, line: line)
             throw CheckFailure.failed
         }
+        try await idle(file: file, line: line)
     }
 
     private func capture(_ name: String) {
@@ -102,9 +107,21 @@ final class LupoStoreKitTests: XCTestCase {
     }
 
     private func statusCleared(file: StaticString = #filePath, line: UInt = #line) async throws {
+        // purchase() clears the old status before awaiting StoreKit. A missing status
+        // alone does not prove cancellation has finished or that retry is enabled.
+        try await idle(file: file, line: line)
         let cleared = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.staticTexts["plus.status"])
-        guard await XCTWaiter.fulfillment(of: [cleared], timeout: 12) == .completed else {
+        guard await XCTWaiter.fulfillment(of: [cleared], timeout: storeTimeout) == .completed else {
             XCTFail("Status was not cleared", file: file, line: line); throw CheckFailure.failed
+        }
+    }
+
+    private func idle(file: StaticString = #filePath, line: UInt = #line) async throws {
+        let completed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.progressIndicators["plus.busy"])
+        guard await XCTWaiter.fulfillment(of: [completed], timeout: storeTimeout) == .completed else {
+            capture("store-request-still-running")
+            XCTFail("StoreKit request did not finish. \(transactionsDescription)", file: file, line: line)
+            throw CheckFailure.failed
         }
     }
 

@@ -448,7 +448,7 @@ struct MembershipView: View {
                         .accessibilityValue(product.displayName)
                 }
             }
-            if membership.busy { ProgressView("Checking with the App Store…") }
+            if membership.busy { ProgressView("Checking with the App Store…").accessibilityIdentifier("plus.busy") }
             if let status = membership.status { Text(status).font(.subheadline).accessibilityIdentifier("plus.status") }
             Text("A one-time purchase charged to your Apple Account. Restore the unlock on supported devices using the same Apple Account. Your personal progress transfers separately through an exported backup.").font(.footnote).foregroundStyle(Theme.secondaryText)
             Button("Restore purchases") { Task { await membership.restore() } }.disabled(membership.busy)
