@@ -110,6 +110,7 @@ final class Membership: ObservableObject {
     @Published private(set) var busy = false
     @Published var status: String?
     private var listener: Task<Void, Never>?
+    private let receiptOperations = StoreOperationQueue()
     #if DEBUG
     private let logger = Logger(subsystem: "com.chlebholdings.lupo", category: "Store")
     #endif
@@ -134,7 +135,11 @@ final class Membership: ObservableObject {
             for await result in Transaction.updates {
                 guard let self else { return }
                 if case .verified(let transaction) = result {
-                    await self.refresh(); self.status = nil; await transaction.finish()
+                    await self.receiptOperations.enqueue {
+                        await self.readEntitlements()
+                        self.status = nil
+                        await transaction.finish()
+                    }.value
                 }
             }
         }
@@ -154,6 +159,11 @@ final class Membership: ObservableObject {
     }
     func refresh() async {
         guard !usesUnavailableTestStore else { active = false; return }
+        await receiptOperations.enqueue { await self.readEntitlements() }.value
+    }
+    // Call only inside receiptOperations. Restore must not clear StoreKit's
+    // receipt cache while an earlier ownership read is still in flight.
+    private func readEntitlements() async {
         trace("Entitlement lookup started")
         var entitled = false
         for await result in Transaction.currentEntitlements {
@@ -173,7 +183,11 @@ final class Membership: ObservableObject {
             switch result {
             case .success(.verified(let transaction)):
                 trace("Verified purchase received")
-                await refresh(); await transaction.finish(); status = active ? "Welcome to Lupo Plus." : "Purchase received. Checking your unlock."
+                await receiptOperations.enqueue {
+                    await self.readEntitlements()
+                    await transaction.finish()
+                    self.status = self.active ? "Welcome to Lupo Plus." : "Purchase received. Checking your unlock."
+                }.value
             case .success(.unverified): status = "This purchase couldn't be verified. Plus was not unlocked."
             case .pending: status = "Your purchase is awaiting approval."
             case .userCancelled: break
@@ -184,9 +198,14 @@ final class Membership: ObservableObject {
     }
     func restore() async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
-        guard !busy else { return }; busy = true; defer { busy = false }
-        trace("Restore started")
-        do { try await AppStore.sync(); await refresh(); status = active ? "Plus restored." : "No Lupo Plus purchase was found." }
-        catch { status = "Couldn't restore purchases. Please try again." }
+        guard !busy else { return }; busy = true; status = nil; defer { busy = false }
+        await receiptOperations.enqueue {
+            self.trace("Restore started")
+            do {
+                try await AppStore.sync()
+                await self.readEntitlements()
+                self.status = self.active ? "Plus restored." : "No Lupo Plus purchase was found."
+            } catch { self.status = "Couldn't restore purchases. Please try again." }
+        }.value
     }
 }

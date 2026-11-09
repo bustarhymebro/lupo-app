@@ -30,7 +30,7 @@ bash tools/run-iphone-tests.sh
 
 `LupoStoreKitTests` exercises the shipping purchase code through the app UI with Apple's `SKTestSession`: purchase, relaunch, restore, refund, pending approval, failure, cancellation, retry and unverified transactions. A refund must remove paid access while preserving bond and private trail notes. The local configuration is bundled only with the test target; tests assert its distinctive product name before buying. Its synthetic zero amount is test data, not a production offer. No premium override is used. StoreKit tests share simulator state and must run serially. The wrapper boots the simulator and captures StoreKit logs during the run. Set `TEST_FILTER` to an XCTest identifier for a focused diagnostic run; the standard PR workflow runs every test. The selector defaults to the installed iOS 18.5 runtime because newer simulator versions have had StoreKitTest regressions; use `--ios VERSION` explicitly to check another installed runtime. No runtime is downloaded by the selector. Local tests do not replace real App Store sandbox or physical-device tests.
 
-With only Command Line Tools installed, run the same core regression cases through the standalone harness:
+With only Command Line Tools installed, run the game-rule regression cases through the standalone harness. The asynchronous receipt-operation test requires XCTest and runs in CI:
 
 ```sh
 sh tools/test-core.sh
@@ -50,7 +50,7 @@ Configure this non-consumable product in App Store Connect before testing purcha
 
 - `com.chlebholdings.lupo.plus.lifetime`
 
-Prices are loaded from StoreKit and never hardcoded. Empty product results display an unavailable state. Purchase cancellation, pending approval and verification errors do not unlock Plus. Current entitlements and transaction updates drive access; restore uses `AppStore.sync()`.
+Prices are loaded from StoreKit and never hardcoded. Empty product results display an unavailable state. Purchase cancellation, pending approval and verification errors do not unlock Plus. Current entitlements and transaction updates drive access; restore uses `AppStore.sync()`. Receipt reads and manual synchronization run serially, including across suspension, so restore waits for earlier ownership reads and completes its own refresh before another read starts.
 
 Plus is a one-time unlock for two fourteen-step guided trails and two environment variants. The seven-step fresh-start trail, daily routines, reminders, weekly review and recovery are free. Trail notes remain readable without an entitlement. No production product is configured by this repository. Sandbox purchase and refund verification and beta willingness-to-pay research remain release prerequisites.
 
