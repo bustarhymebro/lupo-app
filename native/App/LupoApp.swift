@@ -419,7 +419,7 @@ struct DenView: View {
                     else { store.apply { try $0.chooseDen(den, premium: membership.active) } }
                 } label: {
                     HStack { Text(den); Spacer(); Image(systemName: den == store.state.den ? "checkmark.circle.fill" : den == "Pine forest" || membership.active ? "circle" : "lock") }.padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).accessibilityIdentifier("den.select.\(den)")
             }
             Button(membership.active ? "Your Lupo Plus unlock" : "Explore Lupo Plus", systemImage: "sparkles") { plus = true }
             Button("Settings & your data", systemImage: "gearshape") { settings = true }

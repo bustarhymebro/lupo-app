@@ -124,6 +124,7 @@ final class LupoUITests: XCTestCase {
         capture("10-focus")
         tap(app.buttons["screen.close.Focus"])
         tap(app.tabBars.buttons["Den"])
+        tap(app.buttons["den.select.Pine forest"])
         capture("11-den")
         tap(app.buttons["Settings & your data"])
         capture("12-settings")

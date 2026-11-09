@@ -8,15 +8,20 @@ struct WolfScene: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var breathing = false
     @State private var response = false
+    @MainActor private static let images: [String: Image] = {
+        var images: [String: Image] = [:]
+        for name in ["forest-dawn", "wolf-pup", "wolf-yearling", "wolf-scout", "wolf-hunter", "wolf-alpha"] {
+            guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { continue }
+            #if os(iOS)
+            if let image = UIImage(contentsOfFile: url.path) { images[name] = Image(uiImage: image) }
+            #else
+            if let image = NSImage(contentsOf: url) { images[name] = Image(nsImage: image) }
+            #endif
+        }
+        return images
+    }()
     private func artwork(_ name: String) -> Image {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return Image(systemName: "pawprint.fill") }
-        #if os(iOS)
-        guard let image = UIImage(contentsOfFile: url.path) else { return Image(systemName: "pawprint.fill") }
-        return Image(uiImage: image)
-        #else
-        guard let image = NSImage(contentsOf: url) else { return Image(systemName: "pawprint.fill") }
-        return Image(nsImage: image)
-        #endif
+        Self.images[name] ?? Image(systemName: "pawprint.fill")
     }
     var body: some View {
         GeometryReader { geometry in
@@ -31,8 +36,9 @@ struct WolfScene: View {
                 Ellipse().fill(Color(red: 0.12, green: 0.20, blue: 0.15).opacity(0.25))
                     .frame(width: 128, height: 16).blur(radius: 8).offset(y: 120)
                 artwork("wolf-\(stage.lowercased())").resizable().scaledToFit()
-                    .frame(width: min(geometry.size.width - 48, 290), height: 270)
+                    .frame(width: max(0, min(geometry.size.width - 48, 290)), height: 270)
                     .scaleEffect(response && !reduceMotion ? 1.035 : breathing && !reduceMotion ? 1.012 : 1, anchor: .bottom)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 2.8).repeatForever(autoreverses: true), value: breathing)
                     .rotationEffect(.degrees(nourishment < 25 ? -3 : 0), anchor: .bottom)
                     .saturation(nourishment < 25 ? 0.75 : 1)
                     .offset(y: 8)
@@ -42,7 +48,8 @@ struct WolfScene: View {
         .frame(height: 310).clipShape(RoundedRectangle(cornerRadius: 28))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(stage) wolf in a woodland clearing. \(nourishment < 25 ? "Hungry and ready for a meal." : "Content and glad you're here.")")
-        .onAppear { if !reduceMotion { withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) { breathing = true } } }
+        .onAppear { breathing = !reduceMotion }
+        .onChange(of: reduceMotion) { _, reduced in breathing = !reduced }
         .onChange(of: nourishment) { old, new in
             if new > old && !reduceMotion {
                 withAnimation(.easeOut(duration: 0.22)) { response = true }
