@@ -147,7 +147,7 @@ final class Membership: ObservableObject {
         }
         active = entitled
     }
-    func purchase(_ product: Product, using action: PurchaseAction) async {
+    func purchase(_ product: Product, using action: sending PurchaseAction) async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; status = nil; defer { busy = false }
         do {
