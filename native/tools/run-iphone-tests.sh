@@ -12,6 +12,11 @@ trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
 
 set -- -project Lupo.xcodeproj -scheme LupoStoreKitTests -configuration Debug \
   -destination "platform=iOS Simulator,id=$simulator_id" \
-  -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
+  -derivedDataPath UITestBuild -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
+# SKTestSession needs an installed target when it clears transactions and sends
+# configuration updates. XCUITest otherwise installs the app on its first launch,
+# after the StoreKit test's prepare() has already configured the session.
+xcodebuild "$@" build-for-testing
+xcrun simctl install "$simulator_id" UITestBuild/Build/Products/Debug-iphonesimulator/Lupo.app
 if [ -n "${TEST_FILTER:-}" ]; then set -- "$@" "-only-testing:$TEST_FILTER"; fi
-xcodebuild "$@" test
+xcodebuild "$@" -resultBundlePath TestResults.xcresult test-without-building
