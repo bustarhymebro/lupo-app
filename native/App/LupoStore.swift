@@ -147,11 +147,12 @@ final class Membership: ObservableObject {
         }
         active = entitled
     }
-    func purchase(_ product: Product) async {
+    func purchase(_ product: Product, using action: PurchaseAction) async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; status = nil; defer { busy = false }
         do {
-            switch try await product.purchase() {
+            // The view's PurchaseAction carries the scene needed for system confirmation UI.
+            switch try await action(product) {
             case .success(.verified(let transaction)):
                 await refresh(); await transaction.finish(); status = active ? "Welcome to Lupo Plus." : "Purchase received. Checking your unlock."
             case .success(.unverified): status = "This purchase couldn't be verified. Plus was not unlocked."
@@ -159,7 +160,8 @@ final class Membership: ObservableObject {
             case .userCancelled: break
             @unknown default: status = "Purchase status changed. Try restoring purchases."
             }
-        } catch { status = "Purchase didn't finish. You haven't lost any progress." }
+        } catch StoreKitError.userCancelled { status = nil }
+        catch { status = "Purchase didn't finish. You haven't lost any progress." }
     }
     func restore() async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
