@@ -134,4 +134,24 @@ final class LupoUITests: XCTestCase {
         tap(app.buttons["screen.close.Settings"])
         XCTAssertTrue(app.buttons["Settings & your data"].waitForExistence(timeout: 5))
     }
+
+    func testPaidSceneryCanBePreviewedWithoutChangingTheFreeDen() {
+        prepare(); adopt()
+        tap(app.tabBars.buttons["Den"])
+        for den in ["Moonlit lake", "Autumn ridge"] {
+            tap(app.buttons["den.select.\(den)"])
+            let title = app.staticTexts["den.preview.name"]
+            XCTAssertTrue(title.waitForExistence(timeout: 5))
+            XCTAssertEqual(title.label, den)
+            XCTAssertFalse(app.buttons["den.preview.choose"].exists)
+            capture("14-preview-\(den)")
+            tap(app.buttons["den.preview.offer"])
+            XCTAssertTrue(app.buttons["Restore purchases"].waitForExistence(timeout: 5))
+            tap(app.buttons["screen.close.Lupo Plus"])
+            XCTAssertTrue(title.waitForExistence(timeout: 5))
+            tap(app.buttons["screen.close.Den preview"])
+            XCTAssertTrue(app.buttons["den.select.Pine forest"].isSelected)
+            XCTAssertFalse(app.buttons["den.select.\(den)"].isSelected)
+        }
+    }
 }

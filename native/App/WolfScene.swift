@@ -10,7 +10,7 @@ struct WolfScene: View {
     @State private var response = false
     @MainActor private static let images: [String: Image] = {
         var images: [String: Image] = [:]
-        for name in ["forest-dawn", "wolf-pup", "wolf-yearling", "wolf-scout", "wolf-hunter", "wolf-alpha"] {
+        for name in ["forest-dawn", "moonlit-lake", "autumn-ridge", "wolf-pup", "wolf-yearling", "wolf-scout", "wolf-hunter", "wolf-alpha"] {
             guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { continue }
             #if os(iOS)
             if let image = UIImage(contentsOfFile: url.path) { images[name] = Image(uiImage: image) }
@@ -23,15 +23,30 @@ struct WolfScene: View {
     private func artwork(_ name: String) -> Image {
         Self.images[name] ?? Image(systemName: "pawprint.fill")
     }
+    private var landscape: String {
+        switch den {
+        case "Moonlit lake": "moonlit-lake"
+        case "Autumn ridge": "autumn-ridge"
+        default: "forest-dawn"
+        }
+    }
+    private var settingDescription: String {
+        switch den {
+        case "Moonlit lake": "beside a moonlit lake"
+        case "Autumn ridge": "on a golden autumn ridge"
+        default: "in a woodland clearing"
+        }
+    }
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                artwork("forest-dawn").resizable().scaledToFill()
-                    .frame(width: geometry.size.width, height: 310).clipped()
+                artwork(landscape).resizable().scaledToFill()
+                    // Keep the moon visible when the landscape is cropped on a narrow phone.
+                    .frame(width: geometry.size.width, height: 310, alignment: den == "Moonlit lake" ? .trailing : .center).clipped()
                     .overlay {
-                        if den == "Moonlit lake" { Color(red: 0.14, green: 0.18, blue: 0.43).opacity(0.45) }
-                        else if den == "Autumn ridge" { Color(red: 0.68, green: 0.28, blue: 0.08).opacity(0.22) }
-                        else if colorScheme == .dark { Color(red: 0.04, green: 0.13, blue: 0.17).opacity(0.25) }
+                        if colorScheme == .dark && den != "Moonlit lake" {
+                            Color(red: 0.04, green: 0.13, blue: 0.17).opacity(0.25)
+                        }
                     }
                 Ellipse().fill(Color(red: 0.12, green: 0.20, blue: 0.15).opacity(0.25))
                     .frame(width: 128, height: 16).blur(radius: 8).offset(y: 120)
@@ -47,7 +62,7 @@ struct WolfScene: View {
         }
         .frame(height: 310).clipShape(RoundedRectangle(cornerRadius: 28))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(stage) wolf in a woodland clearing. \(nourishment < 25 ? "Hungry and ready for a meal." : "Content and glad you're here.")")
+        .accessibilityLabel("\(stage) wolf \(settingDescription). \(nourishment < 25 ? "Hungry and ready for a meal." : "Content and glad you're here.")")
         .onAppear { breathing = !reduceMotion }
         .onChange(of: reduceMotion) { _, reduced in breathing = !reduced }
         .onChange(of: nourishment) { old, new in

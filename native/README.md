@@ -20,7 +20,7 @@ simulator_id=$(python3 tools/select-simulator.py)
 xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destination "platform=iOS Simulator,id=$simulator_id" -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
 ```
 
-Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The five general UI flows use a Debug-only unavailable-store fixture so existing purchases cannot alter their behavior.
+Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The six general UI flows use a Debug-only unavailable-store fixture so existing purchases cannot alter their behavior. They include previewing both paid environments, opening and dismissing their offers, and confirming that previewing does not change the selected free den.
 
 The dedicated `LupoStoreKitTests` scheme activates the local StoreKit configuration and runs both UI classes. The normal `Lupo` scheme runs only the general interaction tests and has no local store configured for its Run action. Run the full suite with:
 
@@ -70,7 +70,7 @@ CI also builds an unsigned device Release configuration with Xcode 26.3 and an i
 
 ## Assets
 
-The wolf forms and woodland background are original generated project assets under `Resources/`. They are independently layered so the app can animate character responses without moving interface controls. Resource files preserve the generated image alpha and are framed with complete ears, paws and tails.
+The wolf forms and three landscapes are original generated project assets under `Resources/`. Pine Forest, Moonlit Lake and Autumn Ridge have distinct illustrated environments. They are independently layered so the app can animate character responses without moving interface controls. Resource files preserve the generated image alpha and are framed with complete ears, paws and tails. The lake composition keeps its moon visible when cropped on a narrow phone.
 
 ## Reminders and trails
 

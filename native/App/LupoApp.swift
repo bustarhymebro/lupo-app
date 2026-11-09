@@ -410,6 +410,7 @@ struct DenView: View {
     @EnvironmentObject var membership: Membership
     @State private var plus = false
     @State private var settings = false
+    @State private var preview: DenPreviewSelection?
     private var visibleDen: String { membership.active ? store.state.den : "Pine forest" }
     var body: some View {
         Screen(title: "Your den") {
@@ -417,7 +418,7 @@ struct DenView: View {
             Text("Make yourself at home").font(.title2.bold())
             ForEach(["Pine forest", "Moonlit lake", "Autumn ridge"], id: \.self) { den in
                 Button {
-                    if den != "Pine forest" && !membership.active { plus = true }
+                    if den != "Pine forest" && !membership.active { preview = DenPreviewSelection(name: den) }
                     else { store.apply { try $0.chooseDen(den, premium: membership.active) } }
                 } label: {
                     HStack { Text(den); Spacer(); Image(systemName: den == visibleDen ? "checkmark.circle.fill" : den == "Pine forest" || membership.active ? "circle" : "lock") }.padding().background(Theme.panel, in: RoundedRectangle(cornerRadius: 16))
@@ -428,6 +429,38 @@ struct DenView: View {
                 .accessibilityIdentifier("den.membership")
             Button("Settings & your data", systemImage: "gearshape") { settings = true }
         }.sheet(isPresented: $plus) { MembershipView() }.sheet(isPresented: $settings) { SettingsView() }
+            .sheet(item: $preview) { DenPreviewView(den: $0.name) }
+    }
+}
+
+private struct DenPreviewSelection: Identifiable {
+    let name: String
+    var id: String { name }
+}
+
+private struct DenPreviewView: View {
+    let den: String
+    @EnvironmentObject var store: LupoStore
+    @EnvironmentObject var membership: Membership
+    @Environment(\.dismiss) private var dismiss
+    @State private var plus = false
+    var body: some View {
+        Screen(title: "Den preview", showsClose: true) {
+            Text("LUPO PLUS PREVIEW").font(.caption.bold()).tracking(2).foregroundStyle(Theme.accent)
+            WolfScene(nourishment: store.state.nourishment, stage: store.state.stage, den: den)
+            Text(den).font(.title2.bold()).accessibilityIdentifier("den.preview.name")
+            Text(den == "Moonlit lake" ? "A quiet shore for the end of a busy day." : "A little golden light for your next small beginning.").foregroundStyle(Theme.secondaryText)
+            if membership.active {
+                ActionButton(title: "Make this my den", icon: "house") {
+                    store.apply { try $0.chooseDen(den, premium: membership.active) }
+                    if store.state.den == den { dismiss() }
+                }.accessibilityIdentifier("den.preview.choose")
+            } else {
+                Text("Both illustrated dens and two guided trails are included with the one-time Lupo Plus unlock.").font(.subheadline)
+                ActionButton(title: "Explore Lupo Plus", icon: "sparkles") { plus = true }
+                    .accessibilityIdentifier("den.preview.offer")
+            }
+        }.sheet(isPresented: $plus) { MembershipView() }
     }
 }
 
