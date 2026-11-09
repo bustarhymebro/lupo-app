@@ -32,7 +32,7 @@ final class LupoStoreKitTests: XCTestCase {
         try tap(app.buttons["Make room for this"])
         try tap(app.buttons["Share the welcome meal"])
         try tap(app.tabBars.buttons["Den"])
-        try tap(app.buttons["Explore Lupo Plus"])
+        try tap(app.buttons["den.membership"])
         try assertLocalProduct()
     }
 
@@ -149,7 +149,9 @@ final class LupoStoreKitTests: XCTestCase {
         try tap(app.buttons["screen.close.Guided trails"])
         app.terminate(); app.launch()
         try tap(app.tabBars.buttons["Den"])
-        try tap(app.buttons["Your Lupo Plus unlock"])
+        // The label changes after the asynchronous entitlement lookup. Open the
+        // same control in either state, then wait for the real receipt outcome.
+        try tap(app.buttons["den.membership"])
         try await unlocked(true)
         try tap(app.buttons["Restore purchases"])
         try await status("Plus restored.")

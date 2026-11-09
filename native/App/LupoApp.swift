@@ -425,6 +425,7 @@ struct DenView: View {
                     .accessibilityAddTraits(den == visibleDen ? .isSelected : [])
             }
             Button(membership.active ? "Your Lupo Plus unlock" : "Explore Lupo Plus", systemImage: "sparkles") { plus = true }
+                .accessibilityIdentifier("den.membership")
             Button("Settings & your data", systemImage: "gearshape") { settings = true }
         }.sheet(isPresented: $plus) { MembershipView() }.sheet(isPresented: $settings) { SettingsView() }
     }
