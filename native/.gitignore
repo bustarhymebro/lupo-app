@@ -4,4 +4,9 @@
 xcuserdata/
 .DS_Store
 DerivedData/
+UITestBuild/
+ReleaseBuild/
+UITestScreenshots/
+UITestSummary.json
+StoreKitDiagnostics.log
 *.xcresult/

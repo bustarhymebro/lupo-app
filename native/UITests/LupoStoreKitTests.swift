@@ -117,7 +117,7 @@ final class LupoStoreKitTests: XCTestCase {
     }
 
     private func idle(file: StaticString = #filePath, line: UInt = #line) async throws {
-        let completed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.progressIndicators["plus.busy"])
+        let completed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.activityIndicators["plus.busy"])
         guard await XCTWaiter.fulfillment(of: [completed], timeout: storeTimeout) == .completed else {
             capture("store-request-still-running")
             XCTFail("StoreKit request did not finish. \(transactionsDescription)", file: file, line: line)
