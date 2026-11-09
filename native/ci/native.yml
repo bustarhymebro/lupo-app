@@ -1,0 +1,23 @@
+name: Native iPhone checks
+on:
+  pull_request:
+    paths: ['native/**', '.github/workflows/native.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test game rules
+        working-directory: native
+        run: swift test -j 2
+      - name: Verify generated project
+        working-directory: native
+        run: |
+          python3 tools/generate-project.py
+          git diff --exit-code -- Lupo.xcodeproj
+      - name: Build for iPhone simulator
+        working-directory: native
+        run: xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
