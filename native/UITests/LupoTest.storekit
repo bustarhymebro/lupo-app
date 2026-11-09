@@ -1,0 +1,29 @@
+{
+  "identifier": "D1D9E4EB",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "0",
+      "familyShareable": false,
+      "internalID": "6D527009",
+      "localizations": [
+        {
+          "description": "Synthetic product for local automated tests. No real charge.",
+          "displayName": "Lupo Plus — Local Test",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.chlebholdings.lupo.plus.lifetime",
+      "referenceName": "Local test fixture only",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_askToBuyEnabled": false,
+    "_disableDialogs": true,
+    "_locale": "en_US",
+    "_storefront": "USA"
+  },
+  "subscriptionGroups": [],
+  "version": {"major": 3, "minor": 0}
+}

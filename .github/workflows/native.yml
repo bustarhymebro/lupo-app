@@ -1,0 +1,85 @@
+name: Native iPhone checks
+
+on:
+  pull_request:
+    paths: ['native/**', '.github/workflows/native.yml']
+  workflow_dispatch:
+    inputs:
+      test_filter:
+        description: 'Optional XCTest identifier for a focused diagnostic run'
+        required: false
+        type: string
+      modern_storekit:
+        description: 'Check the installed iOS 26.4 StoreKit runtime on macOS 26'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: ${{ inputs.modern_storekit && 'macos-26' || 'macos-15' }}
+    timeout-minutes: ${{ inputs.modern_storekit && 45 || 30 }}
+    env:
+      DEVELOPER_DIR: ${{ inputs.modern_storekit && '/Applications/Xcode_26.6.app/Contents/Developer' || '/Applications/Xcode_16.4.app/Contents/Developer' }}
+      TEST_IOS_VERSION: ${{ inputs.modern_storekit && '26.4' || '18.5' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare modern StoreKit simulator
+        if: ${{ inputs.modern_storekit }}
+        working-directory: native
+        run: python3 tools/prepare-storekit-simulator.py
+      - name: Test game rules
+        working-directory: native
+        run: swift test -j 2
+      - name: Verify generated project
+        working-directory: native
+        run: |
+          python3 tools/generate-project.py
+          git diff --exit-code -- Lupo.xcodeproj
+      - name: Build for iPhone simulator
+        working-directory: native
+        run: xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Run iPhone interaction checks
+        working-directory: native
+        env:
+          TEST_FILTER: ${{ inputs.test_filter }}
+        run: bash tools/run-iphone-tests.sh
+      - name: Export readable UI evidence
+        if: always()
+        working-directory: native
+        run: |
+          if [ -d TestResults.xcresult ]; then
+            xcrun xcresulttool export attachments --path TestResults.xcresult --output-path UITestScreenshots
+            xcrun xcresulttool get test-results summary --path TestResults.xcresult --compact > UITestSummary.json
+          fi
+      - name: Save UI test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lupo-iphone-test-results
+          path: |
+            native/TestResults.xcresult
+            native/UITestScreenshots
+            native/UITestSummary.json
+            native/StoreKitDiagnostics.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release-build:
+    runs-on: macos-15
+    timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build unsigned iPhone release with iOS 26 SDK
+        working-directory: native
+        run: |
+          xcodebuild -version
+          xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath ReleaseBuild CODE_SIGNING_ALLOWED=NO build
+      - name: Check release excludes local purchase fixtures
+        working-directory: native
+        run: python3 tools/check-release.py ReleaseBuild/Build/Products/Release-iphoneos/Lupo.app
