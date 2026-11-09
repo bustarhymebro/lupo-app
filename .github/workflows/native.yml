@@ -34,17 +34,7 @@ jobs:
         working-directory: native
         env:
           TEST_FILTER: ${{ inputs.test_filter }}
-        run: |
-          simulator_id=$(python3 tools/select-simulator.py)
-          only=()
-          if [ -n "$TEST_FILTER" ]; then only=("-only-testing:$TEST_FILTER"); fi
-          xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destination "platform=iOS Simulator,id=$simulator_id" -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO "${only[@]}" test
-      - name: Save simulator StoreKit diagnostics
-        if: always()
-        working-directory: native
-        run: |
-          simulator_id=$(python3 tools/select-simulator.py)
-          xcrun simctl spawn "$simulator_id" log show --style compact --last 20m --predicate 'process == "Lupo" OR process == "storekitd" OR process == "appstored" OR subsystem CONTAINS[c] "StoreKit"' > StoreKitDiagnostics.log 2>&1 || true
+        run: bash tools/run-iphone-tests.sh
       - name: Export readable UI evidence
         if: always()
         working-directory: native
