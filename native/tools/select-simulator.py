@@ -15,7 +15,7 @@ for runtime, devices in data["devices"].items():
     if ".iOS-" not in runtime:
         continue
     version = tuple(int(part) for part in runtime.split(".iOS-")[1].split("-"))
-    if version != requested or version < (17,):
+    if version[:len(requested)] != requested or version < (17,):
         continue
     for device in devices:
         if device.get("isAvailable") and device["name"].startswith("iPhone"):

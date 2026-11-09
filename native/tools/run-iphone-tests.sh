@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-simulator_id=$(python3 tools/select-simulator.py)
+simulator_id=$(python3 tools/select-simulator.py --ios "${TEST_IOS_VERSION:-18.5}")
 # Boot before starting the test runner so logs survive Xcode's simulator shutdown.
 xcrun simctl bootstatus "$simulator_id" -b
 xcrun simctl spawn "$simulator_id" log stream --style compact --level debug \
