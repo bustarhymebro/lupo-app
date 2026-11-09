@@ -27,11 +27,22 @@ jobs:
         run: |
           simulator_id=$(python3 tools/select-simulator.py)
           xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destination "platform=iOS Simulator,id=$simulator_id" -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
+      - name: Export readable UI evidence
+        if: always()
+        working-directory: native
+        run: |
+          if [ -d TestResults.xcresult ]; then
+            xcrun xcresulttool export attachments --path TestResults.xcresult --output-path UITestScreenshots
+            xcrun xcresulttool get test-results summary --path TestResults.xcresult --compact > UITestSummary.json
+          fi
       - name: Save UI test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lupo-iphone-test-results
-          path: native/TestResults.xcresult
+          path: |
+            native/TestResults.xcresult
+            native/UITestScreenshots
+            native/UITestSummary.json
           if-no-files-found: ignore
           retention-days: 7
