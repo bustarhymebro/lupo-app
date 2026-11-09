@@ -1,6 +1,9 @@
 import SwiftUI
 import StoreKit
 import UniformTypeIdentifiers
+#if DEBUG
+import OSLog
+#endif
 
 @MainActor
 final class LupoStore: ObservableObject {
@@ -107,6 +110,14 @@ final class Membership: ObservableObject {
     @Published private(set) var busy = false
     @Published var status: String?
     private var listener: Task<Void, Never>?
+    #if DEBUG
+    private let logger = Logger(subsystem: "com.chlebholdings.lupo", category: "Store")
+    #endif
+    private func trace(_ event: String) {
+        #if DEBUG
+        logger.debug("\(event, privacy: .public)")
+        #endif
+    }
     private var usesUnavailableTestStore: Bool {
         #if DEBUG
         return ProcessInfo.processInfo.environment["LUPO_UI_TEST_STORE"] == "unavailable"
@@ -132,8 +143,10 @@ final class Membership: ObservableObject {
     deinit { listener?.cancel() }
     func load() async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
+        trace("Product lookup started")
         do {
             let loaded = try await Product.products(for: Self.productIDs)
+            trace("Product lookup returned")
             products = Self.productIDs.compactMap { id in loaded.first { $0.id == id && $0.type == .nonConsumable } }
             status = products.isEmpty ? unavailableMessage : nil
         } catch { status = "The App Store couldn't be reached. Try again when you're online." }
@@ -141,31 +154,38 @@ final class Membership: ObservableObject {
     }
     func refresh() async {
         guard !usesUnavailableTestStore else { active = false; return }
+        trace("Entitlement lookup started")
         var entitled = false
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result, Self.productIDs.contains(transaction.productID), transaction.revocationDate == nil { entitled = true }
         }
         active = entitled
+        trace("Entitlement lookup finished; active=\(entitled)")
     }
     func purchase(_ product: Product, using action: sending PurchaseAction) async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; status = nil; defer { busy = false }
+        trace("PurchaseAction started")
         do {
             // The view's PurchaseAction carries the scene needed for system confirmation UI.
-            switch try await action(product) {
+            let result = try await action(product)
+            trace("PurchaseAction returned")
+            switch result {
             case .success(.verified(let transaction)):
+                trace("Verified purchase received")
                 await refresh(); await transaction.finish(); status = active ? "Welcome to Lupo Plus." : "Purchase received. Checking your unlock."
             case .success(.unverified): status = "This purchase couldn't be verified. Plus was not unlocked."
             case .pending: status = "Your purchase is awaiting approval."
             case .userCancelled: break
             @unknown default: status = "Purchase status changed. Try restoring purchases."
             }
-        } catch StoreKitError.userCancelled { status = nil }
-        catch { status = "Purchase didn't finish. You haven't lost any progress." }
+        } catch StoreKitError.userCancelled { trace("Purchase canceled"); status = nil }
+        catch { trace("Purchase failed"); status = "Purchase didn't finish. You haven't lost any progress." }
     }
     func restore() async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; defer { busy = false }
+        trace("Restore started")
         do { try await AppStore.sync(); await refresh(); status = active ? "Plus restored." : "No Lupo Plus purchase was found." }
         catch { status = "Couldn't restore purchases. Please try again." }
     }
