@@ -70,7 +70,4 @@ jobs:
           xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath ReleaseBuild CODE_SIGNING_ALLOWED=NO build
       - name: Check release excludes local purchase fixtures
         working-directory: native
-        run: |
-          test ! -f ReleaseBuild/Build/Products/Release-iphoneos/Lupo.app/LupoTest.storekit
-          ! otool -L ReleaseBuild/Build/Products/Release-iphoneos/Lupo.app/Lupo | rg StoreKitTest
-          ! strings ReleaseBuild/Build/Products/Release-iphoneos/Lupo.app/Lupo | rg 'LUPO_UI_TEST_STORE|LUPO_UI_TEST_SESSION'
+        run: python3 tools/check-release.py ReleaseBuild/Build/Products/Release-iphoneos/Lupo.app
