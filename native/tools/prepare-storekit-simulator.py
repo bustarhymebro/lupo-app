@@ -1,15 +1,16 @@
-"""Prepare the iOS 26.6 StoreKit diagnostic runtime on the optional CI runner."""
+"""Prepare an installed modern StoreKit simulator on the optional CI runner."""
 import json
+import os
 import subprocess
 
 def simctl(*args):
     return subprocess.check_output(["xcrun", "simctl", *args], text=True)
 
-subprocess.run(["xcodebuild", "-downloadPlatform", "iOS", "-buildVersion", "26.6"], check=True)
+requested = os.environ.get("TEST_IOS_VERSION", "26.4").split(".")
 runtimes = [r for r in json.loads(simctl("list", "runtimes", "--json"))["runtimes"]
-            if r.get("isAvailable") and r["version"].split(".")[:2] == ["26", "6"]]
+            if r.get("isAvailable") and r["version"].split(".")[:len(requested)] == requested]
 if not runtimes:
-    raise SystemExit("The requested iOS 26.6 runtime is not available after download")
+    raise SystemExit(f"The requested installed iOS {'.'.join(requested)} runtime is unavailable")
 runtime = max(runtimes, key=lambda r: tuple(map(int, r["version"].split("."))))
 devices = json.loads(simctl("list", "devices", "available", "--json"))["devices"]
 if not any(d["name"].startswith("iPhone") for d in devices.get(runtime["identifier"], [])):
