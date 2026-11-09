@@ -66,6 +66,8 @@ Plus is a one-time unlock for two fourteen-step guided trails and two environmen
 
 The root legacy readiness documents describe a different implementation. They are not release evidence for this target.
 
+CI also builds an unsigned device Release configuration with Xcode 26.3 and an iOS 26 SDK. `tools/check-release.py` verifies the built SDK and excludes the local StoreKit configuration, StoreKitTest linkage and debug test controls. This package check does not replace signing, a valid icon catalog, device QA or TestFlight validation.
+
 ## Assets
 
 The wolf forms and woodland background are original generated project assets under `Resources/`. They are independently layered so the app can animate character responses without moving interface controls. Resource files preserve the generated image alpha and are framed with complete ears, paws and tails.
