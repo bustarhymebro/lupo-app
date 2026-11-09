@@ -202,18 +202,6 @@ struct HomeView: View {
             ProgressView(value: Double(store.state.nourishment), total: 100).tint(Theme.accent)
                 .accessibilityLabel("Nourishment").accessibilityValue("\(store.state.nourishment) out of 100")
             Text(store.state.nourishment < 25 ? "A small win will bring the spark back. Complete one goal, then share a meal." : "Your next small win becomes their next adventure.").foregroundStyle(Theme.secondaryText)
-            if store.state.food > 0 && store.state.nourishment < 100 {
-                ActionButton(title: "Share a meal", icon: "carrot.fill") { store.apply { try $0.feed(at: Date()) } }
-            } else if let next = store.day.scheduled.first(where: { !store.day.completed.contains($0.id) }), !store.day.rest {
-                Text("One small thing for you").font(.headline)
-                GoalRow(habit: next)
-            } else if !store.day.completed.isEmpty && store.state.nourishment >= 25 && store.day.expedition == nil {
-                ActionButton(title: "Explore together", icon: "map") { store.apply { game in _ = try game.explore(at: Date()) } }
-            } else {
-                Label(store.day.rest ? "Rest is part of growing." : "You showed up. Enjoy the rest of your day.", systemImage: "checkmark.seal")
-                    .font(.headline).foregroundStyle(Theme.accent)
-            }
-            if store.canUndoGoal { Button("Undo last check-in", systemImage: "arrow.uturn.backward") { store.undoLastGoal() } }
             VStack(alignment: .leading, spacing: 14) {
                 HStack { Text("Today's small wins").font(.headline); Spacer(); Text("\(store.day.completed.count)/\(store.day.scheduled.count)").monospacedDigit() }
                 if store.day.rest { Label("Rest day. The trail can wait.", systemImage: "moon.zzz") }
@@ -236,7 +224,26 @@ struct HomeView: View {
             } else if store.day.completed.isEmpty || store.state.nourishment < 25 {
                 Text("Complete a goal and keep nourishment at 25 or more to discover today's trail.").font(.caption).foregroundStyle(Theme.secondaryText)
             }
-        }.sheet(isPresented: $focusOpen) { FocusView() }.sheet(isPresented: $showingTrails) { TrailsView() }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            VStack(spacing: 8) {
+                dailyAction
+                if store.canUndoGoal { Button("Undo last check-in", systemImage: "arrow.uturn.backward") { store.undoLastGoal() }.buttonStyle(TouchButtonStyle()) }
+            }.padding(.horizontal, 20).padding(.vertical, 12).background(Theme.background)
+        }
+        .sheet(isPresented: $focusOpen) { FocusView() }.sheet(isPresented: $showingTrails) { TrailsView() }
+    }
+    @ViewBuilder private var dailyAction: some View {
+    if store.state.food > 0 && store.state.nourishment < 100 {
+        ActionButton(title: "Share a meal", icon: "carrot.fill") { store.apply { try $0.feed(at: Date()) } }
+    } else if let next = store.day.scheduled.first(where: { !store.day.completed.contains($0.id) }), !store.day.rest {
+        GoalRow(habit: next).padding(.horizontal, 14).background(Theme.panel, in: RoundedRectangle(cornerRadius: 18))
+    } else if !store.day.completed.isEmpty && store.state.nourishment >= 25 && store.day.expedition == nil {
+        ActionButton(title: "Explore together", icon: "map") { store.apply { game in _ = try game.explore(at: Date()) } }
+    } else {
+        Label(store.day.rest ? "Rest is part of growing." : "You showed up. Enjoy the rest of your day.", systemImage: "checkmark.seal")
+            .font(.headline).foregroundStyle(Theme.accent)
+    }
     }
 }
 

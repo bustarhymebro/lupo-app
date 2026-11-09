@@ -48,6 +48,7 @@ final class LupoUITests: XCTestCase {
         prepare(); adopt()
         XCTAssertEqual(app.staticTexts["companion.bond"].label, "0 bond")
         let goal = app.buttons["goal.complete.Read 5 pages"]
+        XCTAssertTrue(goal.isHittable, "The daily action must be reachable without scrolling")
         tap(goal)
         XCTAssertEqual(app.staticTexts["companion.bond"].label, "10 bond")
         tap(app.buttons["Undo last check-in"])
@@ -109,6 +110,7 @@ final class LupoUITests: XCTestCase {
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
         adopt()
         let goal = app.buttons["goal.complete.Read 5 pages"]
+        XCTAssertTrue(goal.isHittable, "The daily action must remain reachable at the largest text size")
         reveal(goal)
         capture("09-accessibility-goal")
         tap(goal)
