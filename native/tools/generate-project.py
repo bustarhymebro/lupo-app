@@ -17,9 +17,10 @@ def render(value):
 sources = sorted(str(p.relative_to(root)) for d in ['App', 'Sources'] for p in (root/d).rglob('*.swift'))
 resources = ['Resources/PrivacyInfo.xcprivacy'] + sorted(str(p.relative_to(root)) for p in (root/'Resources').glob('*.png'))
 files = []
-test_sources = ['UITests/LupoUITests.swift']
-for path in sources + resources + test_sources + ['Resources/Info.plist']:
-    f = add(path, {'isa':'PBXFileReference', 'lastKnownFileType': 'sourcecode.swift' if path.endswith('.swift') else 'image.png' if path.endswith('.png') else 'text.plist.xml', 'path':path, 'sourceTree':'<group>'})
+test_sources = sorted(str(p.relative_to(root)) for p in (root/'UITests').glob('*.swift'))
+test_resources = ['UITests/LupoTest.storekit']
+for path in sources + resources + test_sources + test_resources + ['Resources/Info.plist']:
+    f = add(path, {'isa':'PBXFileReference', 'lastKnownFileType': 'sourcecode.swift' if path.endswith('.swift') else 'image.png' if path.endswith('.png') else 'text' if path.endswith('.storekit') else 'text.plist.xml', 'path':path, 'sourceTree':'<group>'})
     files.append(f)
     add('build:'+path, {'isa':'PBXBuildFile','fileRef':f})
 product = add('product', {'isa':'PBXFileReference','explicitFileType':'wrapper.application','includeInIndex':0,'path':'Lupo.app','sourceTree':'BUILT_PRODUCTS_DIR'})
@@ -39,6 +40,7 @@ for scope in ['project', 'target']:
 target = add('target', {'isa':'PBXNativeTarget','buildConfigurationList':ref('targetconfigs'),'buildPhases':[source_phase,framework_phase,resource_phase],'buildRules':[],'dependencies':[],'name':'Lupo','productName':'Lupo','productReference':product,'productType':'com.apple.product-type.application'})
 test_source_phase = add('test-source-phase', {'isa':'PBXSourcesBuildPhase','buildActionMask':2147483647,'files':[ref('build:'+p) for p in test_sources],'runOnlyForDeploymentPostprocessing':0})
 test_framework_phase = add('test-framework-phase', {'isa':'PBXFrameworksBuildPhase','buildActionMask':2147483647,'files':[],'runOnlyForDeploymentPostprocessing':0})
+test_resource_phase = add('test-resource-phase', {'isa':'PBXResourcesBuildPhase','buildActionMask':2147483647,'files':[ref('build:'+p) for p in test_resources],'runOnlyForDeploymentPostprocessing':0})
 proxy = add('test-proxy', {'isa':'PBXContainerItemProxy','containerPortal':ref('project'),'proxyType':1,'remoteGlobalIDString':target,'remoteInfo':'Lupo'})
 dependency = add('test-dependency', {'isa':'PBXTargetDependency','target':target,'targetProxy':proxy})
 test_configs=[]
@@ -46,7 +48,7 @@ for mode in ['Debug', 'Release']:
     settings={'PRODUCT_NAME':'$(TARGET_NAME)','PRODUCT_BUNDLE_IDENTIFIER':'com.chlebholdings.lupo.uitests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'Lupo','TARGETED_DEVICE_FAMILY':'1','CODE_SIGN_STYLE':'Automatic','SUPPORTED_PLATFORMS':'iphoneos iphonesimulator','SWIFT_VERSION':'6.0','LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks @loader_path/Frameworks'}
     test_configs.append(add('test'+mode, {'isa':'XCBuildConfiguration','buildSettings':settings,'name':mode}))
 add('testconfigs', {'isa':'XCConfigurationList','buildConfigurations':test_configs,'defaultConfigurationIsVisible':0,'defaultConfigurationName':'Release'})
-test_target=add('test-target', {'isa':'PBXNativeTarget','buildConfigurationList':ref('testconfigs'),'buildPhases':[test_source_phase,test_framework_phase],'buildRules':[],'dependencies':[dependency],'name':'LupoUITests','productName':'LupoUITests','productReference':test_product,'productType':'com.apple.product-type.bundle.ui-testing'})
+test_target=add('test-target', {'isa':'PBXNativeTarget','buildConfigurationList':ref('testconfigs'),'buildPhases':[test_source_phase,test_framework_phase,test_resource_phase],'buildRules':[],'dependencies':[dependency],'name':'LupoUITests','productName':'LupoUITests','productReference':test_product,'productType':'com.apple.product-type.bundle.ui-testing'})
 project = add('project', {'isa':'PBXProject','attributes':{'LastUpgradeCheck':'1600'},'buildConfigurationList':ref('projectconfigs'),'compatibilityVersion':'Xcode 14.0','developmentRegion':'en','hasScannedForEncodings':0,'knownRegions':['en','Base'],'mainGroup':group,'productRefGroup':products,'projectDirPath':'','projectRoot':'','targets':[target,test_target]})
 project_dir = root/'Lupo.xcodeproj'
 project_dir.mkdir(exist_ok=True)

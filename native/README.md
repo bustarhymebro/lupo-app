@@ -20,7 +20,9 @@ simulator_id=$(python3 tools/select-simulator.py)
 xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destination "platform=iOS Simulator,id=$simulator_id" -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
 ```
 
-Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The UI suite uses a Debug-only unavailable-store fixture so existing purchases cannot alter its flows. It never makes or restores a purchase and does not verify StoreKit transactions; those require the separate sandbox checks below.
+Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The five general UI flows use a Debug-only unavailable-store fixture so existing purchases cannot alter their behavior.
+
+`LupoStoreKitTests` separately exercises the shipping purchase code through the app UI with Apple's `SKTestSession`: purchase, relaunch, restore, refund, pending approval, failure, cancellation, retry and unverified transactions. A refund must remove paid access while preserving bond and private trail notes. The local configuration is bundled only with the test target; tests assert its distinctive product name before buying. Its synthetic zero amount is test data, not a production offer. No premium override is used. StoreKit tests share simulator state and must run serially, as in the command above. The selector defaults to the installed iOS 18.5 runtime because newer simulator versions have had StoreKitTest regressions; use `--ios VERSION` explicitly to check another installed runtime. No runtime is downloaded by the selector. Local tests do not replace real App Store sandbox or physical-device tests.
 
 With only Command Line Tools installed, run the same core regression cases through the standalone harness:
 
@@ -28,7 +30,7 @@ With only Command Line Tools installed, run the same core regression cases throu
 sh tools/test-core.sh
 ```
 
-`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The active workflow in `.github/workflows/native.yml` runs core XCTest, an unsigned iPhone simulator build and five native UI flows on pull requests affecting the native app. Test result bundles, exported screenshots and a machine-readable summary are retained as workflow artifacts for seven days. Inspect the run for the exact commit before treating a check as evidence.
+`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The active workflow in `.github/workflows/native.yml` runs core XCTest, an unsigned iPhone simulator build and the native UI/StoreKit suites on pull requests affecting the native app. Test result bundles, exported screenshots and a machine-readable summary are retained as workflow artifacts for seven days. Inspect the run for the exact commit before treating a check as evidence.
 
 ## Data and time
 

@@ -117,13 +117,13 @@ final class Membership: ObservableObject {
     }
     private let unavailableMessage = "Plus isn't available in this build. Your wolf and daily goals are free."
     init() {
-        // Interaction tests exercise an unavailable store; real transactions need sandbox tests.
+        // General interaction tests isolate store availability. StoreKit tests use real local transactions.
         if usesUnavailableTestStore { status = unavailableMessage; return }
         listener = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
                 if case .verified(let transaction) = result {
-                    await self.refresh(); await transaction.finish()
+                    await self.refresh(); self.status = nil; await transaction.finish()
                 }
             }
         }
@@ -135,7 +135,7 @@ final class Membership: ObservableObject {
         do {
             let loaded = try await Product.products(for: Self.productIDs)
             products = Self.productIDs.compactMap { id in loaded.first { $0.id == id && $0.type == .nonConsumable } }
-            if products.isEmpty { status = unavailableMessage }
+            status = products.isEmpty ? unavailableMessage : nil
         } catch { status = "The App Store couldn't be reached. Try again when you're online." }
         await refresh()
     }
@@ -149,7 +149,7 @@ final class Membership: ObservableObject {
     }
     func purchase(_ product: Product) async {
         guard !usesUnavailableTestStore else { status = unavailableMessage; return }
-        guard !busy else { return }; busy = true; defer { busy = false }
+        guard !busy else { return }; busy = true; status = nil; defer { busy = false }
         do {
             switch try await product.purchase() {
             case .success(.verified(let transaction)):

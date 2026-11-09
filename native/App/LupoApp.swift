@@ -438,10 +438,13 @@ struct MembershipView: View {
             if membership.active { Label("Lupo Plus is unlocked", systemImage: "checkmark.seal.fill") }
             else {
                 ForEach(membership.products, id: \.id) { product in
-                    ActionButton(title: "Unlock Plus · \(product.displayPrice)", icon: "sparkles") { Task { await membership.purchase(product) } }.disabled(membership.busy)
+                    ActionButton(title: "Unlock Plus · \(product.displayPrice)", icon: "sparkles") { Task { await membership.purchase(product) } }
+                        .disabled(membership.busy)
+                        .accessibilityIdentifier("plus.purchase")
+                        .accessibilityValue(product.displayName)
                 }
             }
-            if let status = membership.status { Text(status).font(.subheadline) }
+            if let status = membership.status { Text(status).font(.subheadline).accessibilityIdentifier("plus.status") }
             Text("A one-time purchase charged to your Apple Account. Restore the unlock on supported devices using the same Apple Account. Your personal progress transfers separately through an exported backup.").font(.footnote).foregroundStyle(Theme.secondaryText)
             Button("Restore purchases") { Task { await membership.restore() } }.disabled(membership.busy)
             Button("Refresh App Store") { Task { await membership.load() } }.disabled(membership.busy)
