@@ -8,7 +8,14 @@ final class ReminderService: ObservableObject {
     private var queued: Companion?
     private var syncing = false
     private let center = UNUserNotificationCenter.current()
-    private let prefix = "lupo.routine."
+    private var prefix: String {
+        #if DEBUG
+        if let session = ProcessInfo.processInfo.environment["LUPO_UI_TEST_SESSION"], UUID(uuidString: session) != nil {
+            return "lupo.uitest.\(session)."
+        }
+        #endif
+        return "lupo.routine."
+    }
 
     func enable(_ preference: ReminderPreference, store: LupoStore) async {
         guard !busy else { return }; busy = true; defer { busy = false }

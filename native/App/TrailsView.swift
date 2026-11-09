@@ -24,7 +24,7 @@ struct TrailsView: View {
                         Text("Step \(progress.entries.count + 1) of \(trail.steps.count) · \(step.title)").font(.headline)
                         Text(step.action)
                         Text(step.reflection).font(.subheadline.bold())
-                        TextField("Optional note, just for you", text: $note, axis: .vertical).lineLimit(3...5).textFieldStyle(.roundedBorder)
+                        TextField("Optional note, just for you", text: $note, axis: .vertical).lineLimit(3...5).textFieldStyle(.roundedBorder).accessibilityIdentifier("trail.note")
                         Text("\(note.count)/280 · Stored only on this device and in your exported backups.").font(.caption).foregroundStyle(.secondary)
                         if trail.premium && !membership.active {
                             ActionButton(title: "Unlock this trail with Plus", icon: "sparkles") { showingPlus = true }
@@ -32,7 +32,7 @@ struct TrailsView: View {
                             ActionButton(title: "I did this · earn one meal", icon: "checkmark") {
                                 store.apply { try $0.completeTrailStep(note: note, premium: membership.active, at: Date()) }
                                 if store.message == nil { note = "" }
-                            }.disabled(note.count > 280 || store.day.rest)
+                            }.disabled(note.count > 280 || store.day.rest).accessibilityIdentifier("trail.complete")
                         }
                         if store.day.rest { Text("It's a rest day. This step will be here when you return.").font(.subheadline) }
                     }
@@ -50,7 +50,7 @@ struct TrailsView: View {
                         if trail.premium && !membership.active { showingPlus = true }
                         else if store.state.trail != nil { replacing = trail.id }
                         else { begin(trail.id) }
-                    }
+                    }.accessibilityIdentifier("trail.start.\(trail.id)")
                 }.padding(.vertical, 12)
                 Divider()
             }

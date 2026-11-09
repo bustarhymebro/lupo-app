@@ -13,13 +13,22 @@ swift test -j 2
 xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 ```
 
+The `LupoUITests` target covers onboarding, goal rewards and undo, exploration persistence, edits that begin tomorrow, guided-trail progress, purchase-screen exit and the largest accessibility text category. Each UI test has an isolated Debug-only save directory and notification identifier namespace. UI tests have not yet run on this development host. With an installed iPhone simulator runtime:
+
+```sh
+simulator_id=$(python3 tools/select-simulator.py)
+xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destination "platform=iOS Simulator,id=$simulator_id" -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO test
+```
+
+Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The UI suite uses a Debug-only unavailable-store fixture so existing purchases cannot alter its flows. It never makes or restores a purchase and does not verify StoreKit transactions; those require the separate sandbox checks below.
+
 With only Command Line Tools installed, run the same core regression cases through the standalone harness:
 
 ```sh
 sh tools/test-core.sh
 ```
 
-`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The inactive workflow template in `ci/native.yml` runs XCTest and an unsigned iPhone simulator build when installed under `.github/workflows/` by a connection with workflow permission. It is not currently running.
+`tools/generate-project.py` regenerates the checked-in project deterministically after source or resource changes. The app target compiles the engine source directly; the Swift package tests it independently. The inactive workflow template in `ci/native.yml` runs core XCTest, an unsigned iPhone simulator build and four native UI flows when installed under `.github/workflows/` by a connection with workflow permission. It is not currently running.
 
 ## Data and time
 

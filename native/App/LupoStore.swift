@@ -12,9 +12,15 @@ final class LupoStore: ObservableObject {
     private let url: URL
     init() {
         #if os(macOS)
-        let directory = URL.applicationSupportDirectory.appending(path: Bundle.main.bundleIdentifier ?? "LupoPreview")
+        var directory = URL.applicationSupportDirectory.appending(path: Bundle.main.bundleIdentifier ?? "LupoPreview")
         #else
-        let directory = URL.applicationSupportDirectory.appending(path: "Lupo")
+        var directory = URL.applicationSupportDirectory.appending(path: "Lupo")
+        #endif
+        #if DEBUG
+        // UI tests use a unique save directory and never clear a person's progress.
+        if let session = ProcessInfo.processInfo.environment["LUPO_UI_TEST_SESSION"], UUID(uuidString: session) != nil {
+            directory = directory.appending(path: "UITests").appending(path: session)
+        }
         #endif
         url = directory.appending(path: "companion.json")
         game = Game(state: Companion(day: GameClock().key(Date())))
@@ -101,7 +107,18 @@ final class Membership: ObservableObject {
     @Published private(set) var busy = false
     @Published var status: String?
     private var listener: Task<Void, Never>?
+    private var usesUnavailableTestStore: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.environment["LUPO_UI_TEST_STORE"] == "unavailable"
+            && ProcessInfo.processInfo.environment["LUPO_UI_TEST_SESSION"].flatMap(UUID.init(uuidString:)) != nil
+        #else
+        return false
+        #endif
+    }
+    private let unavailableMessage = "Plus isn't available in this build. Your wolf and daily goals are free."
     init() {
+        // Interaction tests exercise an unavailable store; real transactions need sandbox tests.
+        if usesUnavailableTestStore { status = unavailableMessage; return }
         listener = Task { [weak self] in
             for await result in Transaction.updates {
                 guard let self else { return }
@@ -114,14 +131,16 @@ final class Membership: ObservableObject {
     }
     deinit { listener?.cancel() }
     func load() async {
+        guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         do {
             let loaded = try await Product.products(for: Self.productIDs)
             products = Self.productIDs.compactMap { id in loaded.first { $0.id == id && $0.type == .nonConsumable } }
-            if products.isEmpty { status = "Plus isn't available in this build. Your wolf and daily goals are free." }
+            if products.isEmpty { status = unavailableMessage }
         } catch { status = "The App Store couldn't be reached. Try again when you're online." }
         await refresh()
     }
     func refresh() async {
+        guard !usesUnavailableTestStore else { active = false; return }
         var entitled = false
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result, Self.productIDs.contains(transaction.productID), transaction.revocationDate == nil { entitled = true }
@@ -129,6 +148,7 @@ final class Membership: ObservableObject {
         active = entitled
     }
     func purchase(_ product: Product) async {
+        guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; defer { busy = false }
         do {
             switch try await product.purchase() {
@@ -142,6 +162,7 @@ final class Membership: ObservableObject {
         } catch { status = "Purchase didn't finish. You haven't lost any progress." }
     }
     func restore() async {
+        guard !usesUnavailableTestStore else { status = unavailableMessage; return }
         guard !busy else { return }; busy = true; defer { busy = false }
         do { try await AppStore.sync(); await refresh(); status = active ? "Plus restored." : "No Lupo Plus purchase was found." }
         catch { status = "Couldn't restore purchases. Please try again." }

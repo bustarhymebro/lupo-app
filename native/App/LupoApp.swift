@@ -177,12 +177,12 @@ struct HomeView: View {
         Screen(title: store.state.name) {
             HStack {
                 Label(store.state.stage.uppercased(), systemImage: "sparkle").font(.caption.bold()).tracking(2)
-                Spacer(); Text("\(store.state.bond) bond").font(.subheadline.monospacedDigit())
+                Spacer(); Text("\(store.state.bond) bond").font(.subheadline.monospacedDigit()).accessibilityIdentifier("companion.bond")
             }.foregroundStyle(Theme.accent)
             WolfScene(nourishment: store.state.nourishment, stage: store.state.stage, den: membership.active ? store.state.den : "Pine forest")
             HStack(alignment: .firstTextBaseline) {
                 Text(store.state.mood).font(.title.bold()); Spacer()
-                Label("\(store.state.food) \(store.state.food == 1 ? "meal" : "meals")", systemImage: "carrot.fill").font(.subheadline)
+                Label("\(store.state.food) \(store.state.food == 1 ? "meal" : "meals")", systemImage: "carrot.fill").font(.subheadline).accessibilityIdentifier("companion.meals")
             }
             ProgressView(value: Double(store.state.nourishment), total: 100).tint(Theme.accent)
                 .accessibilityLabel("Nourishment").accessibilityValue("\(store.state.nourishment) out of 100")
@@ -238,6 +238,7 @@ struct GoalRow: View {
             }.padding(.vertical, 10).contentShape(Rectangle())
         }.buttonStyle(TouchButtonStyle()).disabled(done || store.day.rest)
         .accessibilityLabel("\(habit.title), \(done ? "completed" : "complete to earn one meal")")
+        .accessibilityIdentifier("goal.complete.\(habit.title)")
     }
 }
 
@@ -265,7 +266,7 @@ struct GoalsView: View {
                         }
                         Spacer(); Image(systemName: "pencil")
                     }.padding(.vertical, 12)
-                }.buttonStyle(TouchButtonStyle()).accessibilityHint("Edit this goal and its schedule")
+                }.buttonStyle(TouchButtonStyle()).accessibilityHint("Edit this goal and its schedule").accessibilityIdentifier("goal.edit.\(habit.title)")
                 Divider()
             }
             Button("Add a small goal", systemImage: "plus") { adding = true }.disabled(store.state.habits.count >= 3)
@@ -295,7 +296,7 @@ struct AddGoalView: View {
         Screen(title: editing == nil ? "One small promise" : "Make this goal fit", showsClose: true) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("What will you do?").font(.headline)
-                TextField("For example, read 5 pages", text: $title).textFieldStyle(.roundedBorder).frame(minHeight: 44)
+                TextField("For example, read 5 pages", text: $title).textFieldStyle(.roundedBorder).frame(minHeight: 44).accessibilityIdentifier("goal.title")
                 if title.count > 80 { Text("Keep your goal under 80 characters.").font(.footnote).foregroundStyle(.red) }
             }
             VStack(alignment: .leading, spacing: 8) {
