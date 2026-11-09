@@ -10,7 +10,7 @@ xcrun simctl spawn "$simulator_id" log stream --style compact --level debug \
 diagnostic_pid=$!
 trap 'kill "$diagnostic_pid" 2>/dev/null || true' EXIT
 
-set -- -project Lupo.xcodeproj -scheme Lupo -configuration Debug \
+set -- -project Lupo.xcodeproj -scheme LupoStoreKitTests -configuration Debug \
   -destination "platform=iOS Simulator,id=$simulator_id" \
   -parallel-testing-enabled NO -resultBundlePath TestResults.xcresult CODE_SIGNING_ALLOWED=NO
 if [ -n "${TEST_FILTER:-}" ]; then set -- "$@" "-only-testing:$TEST_FILTER"; fi

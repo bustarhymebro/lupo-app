@@ -56,12 +56,17 @@ project_dir.mkdir(exist_ok=True)
 schemes = project_dir/'xcshareddata'/'xcschemes'; schemes.mkdir(parents=True, exist_ok=True)
 build_ref = f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{target}" BuildableName="Lupo.app" BlueprintName="Lupo" ReferencedContainer="container:Lupo.xcodeproj"/>'
 test_ref = f'<BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="{test_target}" BuildableName="LupoUITests.xctest" BlueprintName="LupoUITests" ReferencedContainer="container:Lupo.xcodeproj"/>'
-(schemes/'Lupo.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
+scheme = f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="1600" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{build_ref}</BuildActionEntry><BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES">{test_ref}</BuildActionEntry></BuildActionEntries></BuildAction>
 <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables><TestableReference skipped="NO">{test_ref}</TestableReference></Testables></TestAction>
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{build_ref}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0">{build_ref}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
-</Scheme>''')
+</Scheme>'''
+# Keep local payment configuration out of the normal app Run action.
+general_tests = scheme.replace(test_ref+'</TestableReference>', test_ref+'<SkippedTests><Test Identifier="LupoStoreKitTests"/></SkippedTests></TestableReference>')
+(schemes/'Lupo.xcscheme').write_text(general_tests)
+storekit_tests = scheme.replace('</LaunchAction>', '<StoreKitConfigurationFileReference identifier="../../UITests/LupoTest.storekit"/></LaunchAction>')
+(schemes/'LupoStoreKitTests.xcscheme').write_text(storekit_tests)
 print('Generated Lupo.xcodeproj with', len(sources), 'Swift sources')

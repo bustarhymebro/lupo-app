@@ -22,7 +22,13 @@ xcodebuild -project Lupo.xcodeproj -scheme Lupo -configuration Debug -destinatio
 
 Test screenshots are attached to the result bundle for review; a passing interaction test does not by itself prove visual or accessibility quality. The five general UI flows use a Debug-only unavailable-store fixture so existing purchases cannot alter their behavior.
 
-`LupoStoreKitTests` separately exercises the shipping purchase code through the app UI with Apple's `SKTestSession`: purchase, relaunch, restore, refund, pending approval, failure, cancellation, retry and unverified transactions. A refund must remove paid access while preserving bond and private trail notes. The local configuration is bundled only with the test target; tests assert its distinctive product name before buying. Its synthetic zero amount is test data, not a production offer. No premium override is used. StoreKit tests share simulator state and must run serially, as in the command above. The selector defaults to the installed iOS 18.5 runtime because newer simulator versions have had StoreKitTest regressions; use `--ios VERSION` explicitly to check another installed runtime. No runtime is downloaded by the selector. Local tests do not replace real App Store sandbox or physical-device tests.
+The dedicated `LupoStoreKitTests` scheme activates the local StoreKit configuration and runs both UI classes. The normal `Lupo` scheme runs only the general interaction tests and has no local store configured for its Run action. Run the full suite with:
+
+```sh
+bash tools/run-iphone-tests.sh
+```
+
+`LupoStoreKitTests` exercises the shipping purchase code through the app UI with Apple's `SKTestSession`: purchase, relaunch, restore, refund, pending approval, failure, cancellation, retry and unverified transactions. A refund must remove paid access while preserving bond and private trail notes. The local configuration is bundled only with the test target; tests assert its distinctive product name before buying. Its synthetic zero amount is test data, not a production offer. No premium override is used. StoreKit tests share simulator state and must run serially. The wrapper boots the simulator and captures StoreKit logs during the run. Set `TEST_FILTER` to an XCTest identifier for a focused diagnostic run; the standard PR workflow runs every test. The selector defaults to the installed iOS 18.5 runtime because newer simulator versions have had StoreKitTest regressions; use `--ios VERSION` explicitly to check another installed runtime. No runtime is downloaded by the selector. Local tests do not replace real App Store sandbox or physical-device tests.
 
 With only Command Line Tools installed, run the same core regression cases through the standalone harness:
 
