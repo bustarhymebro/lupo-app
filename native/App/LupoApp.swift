@@ -230,7 +230,8 @@ struct HomeView: View {
             VStack(spacing: 8) {
                 dailyAction
                 if store.canUndoGoal { Button("Undo last check-in", systemImage: "arrow.uturn.backward") { store.undoLastGoal() }.buttonStyle(TouchButtonStyle()) }
-            }.padding(.horizontal, 20).padding(.vertical, 12).background(Theme.background)
+            }.padding(.horizontal, 20).padding(.vertical, 12)
+                .frame(maxWidth: .infinity).background(Theme.background)
         }
         .sheet(isPresented: $focusOpen) { FocusView() }.sheet(isPresented: $showingTrails) { TrailsView() }
     }
