@@ -70,7 +70,7 @@ final class LupoStoreKitTests: XCTestCase {
         guard result == .completed else {
             capture("store-status-failure")
             let observed = value.exists ? value.label : "No status text"
-            XCTFail("Expected: \(message). Observed: \(observed). UI: \(app.debugDescription)", file: file, line: line)
+            XCTFail("Expected: \(message). Observed: \(observed). \(transactionsDescription). UI: \(app.debugDescription)", file: file, line: line)
             throw CheckFailure.failed
         }
     }
@@ -80,7 +80,7 @@ final class LupoStoreKitTests: XCTestCase {
         let result = await XCTWaiter.fulfillment(of: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == %@", NSNumber(value: expected)), object: element)], timeout: 12)
         guard result == .completed else {
             capture("store-entitlement-failure")
-            XCTFail("Incorrect entitlement state. UI: \(app.debugDescription)", file: file, line: line)
+            XCTFail("Incorrect entitlement state. \(transactionsDescription). UI: \(app.debugDescription)", file: file, line: line)
             throw CheckFailure.failed
         }
     }
@@ -88,6 +88,13 @@ final class LupoStoreKitTests: XCTestCase {
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+
+    private var transactionsDescription: String {
+        let records = session.allTransactions().map {
+            "id=\($0.identifier), product=\($0.productIdentifier), state=\($0.state.rawValue), pendingApproval=\($0.pendingAskToBuyConfirmation)"
+        }
+        return "Local transactions: [\(records.joined(separator: "; "))]"
     }
 
     private func statusCleared(file: StaticString = #filePath, line: UInt = #line) async throws {
